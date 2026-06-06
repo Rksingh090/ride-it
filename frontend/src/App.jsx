@@ -20,7 +20,15 @@ import {
   Plus,
   Compass,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Sliders,
+  CreditCard,
+  Clock,
+  X,
+  Coins,
+  HelpCircle,
+  ArrowUpRight,
+  ArrowDownLeft
 } from 'lucide-react';
 
 // Predefined landmark points for Bangalore, San Francisco, and Mumbai for the search feature
@@ -77,6 +85,173 @@ export default function App() {
   // App settings/lists loaded from backend
   const [cities, setCities] = useState([]);
   const [driversList, setDriversList] = useState([]); // Admin list of drivers
+
+  // Redesign Navigation and Custom Theme States
+  const [accentTheme, setAccentTheme] = useState(localStorage.getItem('accentTheme') || 'yellow');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (userProfile?.role === 'driver') return 'telemetry';
+    if (userProfile?.role === 'admin') return 'console';
+    return 'book';
+  });
+
+  // Dynamic Route/Button Accent Hex code
+  const getAccentHex = () => {
+    if (accentTheme === 'orange') return '#f97316';
+    if (accentTheme === 'green') return '#22c55e';
+    return '#facc15'; // default electric yellow
+  };
+
+  // Wallet & Cards states (persisted local storage mocks)
+  const [walletBalance, setWalletBalance] = useState(() => {
+    const cached = localStorage.getItem('walletBalance');
+    return cached ? parseFloat(cached) : 1250.00;
+  });
+
+  const saveWalletBalance = (val) => {
+    setWalletBalance(val);
+    localStorage.setItem('walletBalance', val.toString());
+  };
+
+  const [linkedCards, setLinkedCards] = useState(() => {
+    const cached = localStorage.getItem('linkedCards');
+    return cached ? JSON.parse(cached) : [
+      { id: 'card_1', brand: 'Visa', last4: '4242', expiry: '12/28', holder: 'Rider Demo' },
+      { id: 'card_2', brand: 'Mastercard', last4: '8899', expiry: '09/27', holder: 'Rider Demo' }
+    ];
+  });
+
+  const saveLinkedCards = (cards) => {
+    setLinkedCards(cards);
+    localStorage.setItem('linkedCards', JSON.stringify(cards));
+  };
+
+  // Payment method option chosen: 'wallet' or 'razorpay'
+  const [paymentMethod, setPaymentMethod] = useState('wallet');
+
+  // Razorpay simulated parameters
+  const [razorpayKey, setRazorpayKey] = useState(localStorage.getItem('razorpayKey') || 'rzp_test_rideit9928abc');
+  const [showRazorpayModal, setShowRazorpayModal] = useState(false);
+  const [razorpayAmount, setRazorpayAmount] = useState(0);
+  const [razorpayPurpose, setRazorpayPurpose] = useState(''); // 'load_wallet' or 'ride_payment'
+  const [razorpayCallback, setRazorpayCallback] = useState(null);
+
+  // Ride History state (persisted mock data + dynamic completed rides)
+  const [rideHistory, setRideHistory] = useState(() => {
+    const cached = localStorage.getItem('rideHistory');
+    if (cached) return JSON.parse(cached);
+    return [
+      {
+        id: 'trip_demo_1',
+        pickup: 'Kempegowda International Airport (BLR)',
+        dropoff: 'Indiranagar Metro Station',
+        fare: 620.00,
+        currency: 'INR',
+        vehicle: 'sedan',
+        status: 'completed',
+        date: '2026-06-05T14:30:00Z',
+        driverName: 'John Doe (Sedan)'
+      },
+      {
+        id: 'trip_demo_2',
+        pickup: 'Cubbon Park',
+        dropoff: 'Koramangala Sony World Junction',
+        fare: 155.00,
+        currency: 'INR',
+        vehicle: 'bike',
+        status: 'completed',
+        date: '2026-06-04T10:15:00Z',
+        driverName: 'Suresh Kumar (Bike)'
+      },
+      {
+        id: 'trip_demo_3',
+        pickup: 'Whitefield (ITPB)',
+        dropoff: 'Electronic City Phase 1',
+        fare: 350.00,
+        currency: 'INR',
+        vehicle: 'auto',
+        status: 'cancelled',
+        date: '2026-06-03T18:45:00Z',
+        driverName: 'Rajesh Patil (Auto)'
+      }
+    ];
+  });
+
+  const addRideToHistory = (ride) => {
+    setRideHistory(prev => {
+      const updated = [ride, ...prev];
+      localStorage.setItem('rideHistory', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // Transaction Ledger state (persisted holds, captures, payouts, loads)
+  const [transactions, setTransactions] = useState(() => {
+    const cached = localStorage.getItem('transactions');
+    if (cached) return JSON.parse(cached);
+    return [
+      {
+        id: 'tx_demo_1',
+        reference: 'pay_BLR_airportsedan_8293',
+        tripId: 'trip_demo_1',
+        amount: 620.00,
+        currency: 'INR',
+        type: 'capture',
+        method: 'Razorpay Card',
+        status: 'success',
+        date: '2026-06-05T14:45:00Z'
+      },
+      {
+        id: 'tx_demo_2',
+        reference: 'pay_CUB_korabike_2938',
+        tripId: 'trip_demo_2',
+        amount: 155.00,
+        currency: 'INR',
+        type: 'capture',
+        method: 'Wallet Balance',
+        status: 'success',
+        date: '2026-06-04T10:25:00Z'
+      },
+      {
+        id: 'tx_demo_3',
+        reference: 'hold_WTF_elecauto_9932',
+        tripId: 'trip_demo_3',
+        amount: 350.00,
+        currency: 'INR',
+        type: 'refunded',
+        method: 'Wallet Balance',
+        status: 'success',
+        date: '2026-06-03T18:50:00Z'
+      },
+      {
+        id: 'tx_demo_4',
+        reference: 'load_wallet_initial_001',
+        tripId: null,
+        amount: 1250.00,
+        currency: 'INR',
+        type: 'wallet_load',
+        method: 'Razorpay UPI',
+        status: 'success',
+        date: '2026-06-03T12:00:00Z'
+      }
+    ];
+  });
+
+  const addTransaction = (tx) => {
+    setTransactions(prev => {
+      const updated = [tx, ...prev];
+      localStorage.setItem('transactions', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // Sync activeTab on login/role switch
+  useEffect(() => {
+    if (isLoggedIn && userProfile) {
+      if (userProfile.role === 'rider') setActiveTab('book');
+      else if (userProfile.role === 'driver') setActiveTab('telemetry');
+      else if (userProfile.role === 'admin') setActiveTab('console');
+    }
+  }, [isLoggedIn, userProfile]);
 
   // Landing Page flow states
   const [selectedRole, setSelectedRole] = useState('rider'); // 'rider', 'driver', 'admin'
@@ -178,6 +353,8 @@ export default function App() {
   const [cityMatchingRadius, setCityMatchingRadius] = useState('8.00'); // in km
   const [cityAllowedVehicles, setCityAllowedVehicles] = useState(['bike', 'sedan', 'suv', 'auto']);
   const [polygonPoints, setPolygonPoints] = useState([]); // Array of [lat, lng]
+  const [selectedCityId, setSelectedCityId] = useState('');
+  const [isNewCity, setIsNewCity] = useState(false);
 
   // WebSocket references
   const riderWS = useRef(null);
@@ -382,7 +559,39 @@ export default function App() {
           setActiveTrip(prev => ({ ...prev, status: 'en_route' }));
           setRiderLogs(prev => [...prev, "Trip started! En route to destination."]);
         } else if (payload.event === 'ride_completed') {
-          setActiveTrip(prev => ({ ...prev, status: 'completed', fare: payload.fare }));
+          setActiveTrip(prev => {
+            const updatedTrip = { ...prev, status: 'completed', fare: payload.fare };
+            
+            // Log capture transaction in ledger
+            const captureTx = {
+              id: 'tx_' + Math.random().toString(36).substring(2, 9),
+              reference: 'pay_' + (prev?.id ? prev.id.slice(0, 8) : 'capt') + '_' + Math.floor(Math.random() * 1000),
+              tripId: prev?.id || 'trip_completed',
+              amount: payload.fare,
+              currency: getCurrencySymbol() === '₹' ? 'INR' : 'USD',
+              type: 'capture',
+              method: paymentMethod === 'wallet' ? 'Wallet Balance' : 'Razorpay Card',
+              status: 'success',
+              date: new Date().toISOString()
+            };
+            addTransaction(captureTx);
+
+            // Add ride to local Ride History list
+            const newHistoryItem = {
+              id: prev?.id || 'trip_' + Math.random().toString(36).substring(2, 9),
+              pickup: pickup ? pickup.name : 'Unknown Pickup Location',
+              dropoff: dropoff ? dropoff.name : 'Unknown Dropoff Location',
+              fare: payload.fare,
+              currency: getCurrencySymbol() === '₹' ? 'INR' : 'USD',
+              vehicle: vehicleType,
+              status: 'completed',
+              date: new Date().toISOString(),
+              driverName: 'Dispatched Partner'
+            };
+            addRideToHistory(newHistoryItem);
+
+            return updatedTrip;
+          });
           setRiderLogs(prev => [...prev, `Trip completed. Hope you had a nice ride! Final charged: ${getCurrencySymbol()}${payload.fare.toFixed(2)}`]);
         }
       } catch (err) {
@@ -552,12 +761,14 @@ export default function App() {
       }
 
       const data = await resp.json();
-      addSystemLog(`Admin: Operational city geofence registered: ${data.name} (${data.currency})`);
+      addSystemLog(`Admin: Operational city geofence registered/updated: ${data.name} (${data.currency})`);
       setPolygonPoints([]);
+      setSelectedCityId('');
+      setIsNewCity(false);
       fetchCities();
-      alert(`City geofence ${data.name} successfully registered in database!`);
+      alert(`City geofence ${data.name} successfully registered/updated in database!`);
     } catch (err) {
-      alert('Error creating city: ' + err.message);
+      alert('Error creating/updating city: ' + err.message);
     }
   };
 
@@ -586,6 +797,13 @@ export default function App() {
       alert('Please select pickup and dropoff points first.');
       return;
     }
+
+    const fareEstimate = estimatedFares ? estimatedFares[vehicleType] : 0;
+    if (paymentMethod === 'wallet' && walletBalance < fareEstimate) {
+      alert(`Insufficient wallet balance. Your balance is ${getCurrencySymbol()}${walletBalance.toFixed(2)}, but the estimate is ${getCurrencySymbol()}${fareEstimate.toFixed(2)}. Please load wallet funds or choose Razorpay Card/UPI.`);
+      return;
+    }
+
     try {
       setRiderLogs(["Sending booking request...", "Awaiting geofenced city lookup..."]);
       const resp = await fetch('/api/rides/request', {
@@ -611,6 +829,31 @@ export default function App() {
 
       const trip = await resp.json();
       setActiveTrip(trip);
+
+      // Create and log hold transaction
+      const holdTx = {
+        id: 'tx_' + Math.random().toString(36).substring(2, 9),
+        reference: 'hold_' + trip.id.slice(0, 8) + '_' + Math.floor(Math.random() * 1000),
+        tripId: trip.id,
+        amount: trip.fare,
+        currency: getCurrencySymbol() === '₹' ? 'INR' : 'USD',
+        type: 'hold',
+        method: paymentMethod === 'wallet' ? 'Wallet Balance' : 'Razorpay Checkout',
+        status: 'success',
+        date: new Date().toISOString()
+      };
+      addTransaction(holdTx);
+
+      if (paymentMethod === 'wallet') {
+        saveWalletBalance(walletBalance - trip.fare);
+        addSystemLog(`Rider: Wallet Hold of ${getCurrencySymbol()}${trip.fare.toFixed(2)} authorized.`);
+      } else {
+        // Trigger mock Razorpay payment checkout modal
+        setRazorpayAmount(trip.fare);
+        setRazorpayPurpose('ride_payment');
+        setShowRazorpayModal(true);
+      }
+
       setRiderLogs(prev => [
         ...prev, 
         `Operational City geofence matched (ID: ${trip.city_id})`,
@@ -740,6 +983,38 @@ export default function App() {
       });
       const trip = await resp.json();
       setDriverActiveTrip(trip);
+
+      // Create history record for driver
+      const driverRideItem = {
+        id: trip.id,
+        pickup: `Pickup Pinpoint`,
+        dropoff: `Dropoff Pinpoint`,
+        fare: trip.fare,
+        currency: getCurrencySymbol() === '₹' ? 'INR' : 'USD',
+        vehicle: driverProfile?.vehicle_type || 'sedan',
+        status: 'completed',
+        date: new Date().toISOString(),
+        passengerName: 'Passenger Client'
+      };
+      addRideToHistory(driverRideItem);
+
+      // Log earnings in transaction ledger (90% driver share, 10% platform commission)
+      const earningsTx = {
+        id: 'tx_' + Math.random().toString(36).substring(2, 9),
+        reference: 'earn_' + trip.id.slice(0, 8) + '_' + Math.floor(Math.random() * 1000),
+        tripId: trip.id,
+        amount: trip.fare * 0.9,
+        currency: getCurrencySymbol() === '₹' ? 'INR' : 'USD',
+        type: 'earning',
+        method: 'Platform Dispatch Payout',
+        status: 'success',
+        date: new Date().toISOString()
+      };
+      addTransaction(earningsTx);
+
+      // Increment driver wallet balance
+      saveWalletBalance(walletBalance + (trip.fare * 0.9));
+
       setDriverLogs(prev => [...prev, `Dispatched: Ride completed. Fare captured: ${getCurrencySymbol()}${trip.fare.toFixed(2)}`]);
       stopDriverSimulation();
     } catch (err) {
@@ -764,6 +1039,7 @@ export default function App() {
     if (tripToUse && tripToUse.city_id) {
       const city = cities.find(c => c.id === tripToUse.city_id);
       if (city?.currency === 'INR') return '₹';
+      if (city?.currency === 'USD') return '$';
     }
     
     // Otherwise check geofence of selected pickup
@@ -772,13 +1048,53 @@ export default function App() {
       // Since we don't have ST_Contains client-side, we can see if user searched in landmark list
       const lm = allLandmarks.find(l => l.lat === pickup.Latitude && l.lng === pickup.Longitude);
       if (lm) {
+        const matchingCity = cities.find(c => c.name.toLowerCase() === lm.city.toLowerCase());
+        if (matchingCity) {
+          if (matchingCity.currency === 'INR') return '₹';
+          if (matchingCity.currency === 'USD') return '$';
+        }
         if (lm.city === 'Bangalore' || lm.city === 'Mumbai') return '₹';
       }
     }
 
     // Default based on active city configuration
+    const activeCityObj = cities.find(c => c.name.toLowerCase() === cityName.toLowerCase());
+    if (activeCityObj) {
+      if (activeCityObj.currency === 'INR') return '₹';
+      if (activeCityObj.currency === 'USD') return '$';
+    }
     if (cityName === 'Bangalore' || cityName === 'Mumbai') return '₹';
     return '$';
+  };
+
+  const getMapPickup = () => {
+    if (userProfile?.role === 'driver') {
+      const activeTripOrOffer = driverActiveTrip || driverTripOffer;
+      if (activeTripOrOffer) {
+        return {
+          Latitude: activeTripOrOffer.pickup_lat,
+          Longitude: activeTripOrOffer.pickup_lng,
+          name: "Rider Pickup Location"
+        };
+      }
+      return null;
+    }
+    return pickup;
+  };
+
+  const getMapDropoff = () => {
+    if (userProfile?.role === 'driver') {
+      const activeTripOrOffer = driverActiveTrip || driverTripOffer;
+      if (activeTripOrOffer) {
+        return {
+          Latitude: activeTripOrOffer.dropoff_lat,
+          Longitude: activeTripOrOffer.dropoff_lng,
+          name: "Rider Dropoff Location"
+        };
+      }
+      return null;
+    }
+    return dropoff;
   };
 
   // Filter landmarks based on search text
@@ -815,58 +1131,187 @@ export default function App() {
   };
 
   const estimatedFares = calculateMockFares();
-
-  // RENDER COMPONENT
   return (
-    <div className="w-screen h-screen flex bg-slate-950 text-slate-100 font-sans overflow-hidden">
+    <div className={`w-screen h-screen flex bg-zinc-950 text-zinc-100 font-sans overflow-hidden theme-${accentTheme}`}>
       
+      {/* MOCK RAZORPAY CHECKOUT MODAL OVERLAY */}
+      {showRazorpayModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-[#0c2340] w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col">
+            
+            {/* Razorpay Header */}
+            <div className="p-6 text-white flex flex-col space-y-2 relative">
+              <button 
+                onClick={() => setShowRazorpayModal(false)}
+                className="absolute top-4 right-4 text-zinc-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-sm">R</div>
+                <div>
+                  <h3 className="font-extrabold text-sm tracking-wide">RIDEIT Technologies</h3>
+                  <p className="text-[10px] text-blue-300">Razorpay Secure Checkout</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-2 border-t border-blue-900/50 flex justify-between items-center">
+                <span className="text-[10px] text-blue-200 uppercase tracking-widest font-black">
+                  {razorpayPurpose === 'load_wallet' ? 'Load Wallet Credits' : 'Trip Security Hold'}
+                </span>
+                <span className="text-xl font-black text-emerald-400">
+                  {getCurrencySymbol()}{parseFloat(razorpayAmount).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* Razorpay Body (White card) */}
+            <div className="bg-white text-zinc-800 p-6 flex-1 flex flex-col space-y-4">
+              
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-zinc-400 uppercase">Contact Information</label>
+                <div className="grid grid-cols-2 gap-2 text-xs bg-zinc-50 p-2.5 rounded-lg border border-zinc-200 font-medium">
+                  <span className="truncate">{userProfile?.email || 'demo@rideit.com'}</span>
+                  <span className="text-right">{userProfile?.phone || '+91 9988776655'}</span>
+                </div>
+              </div>
+
+              {/* simulated payment methods */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-zinc-400 uppercase">Select Payment Method</label>
+                
+                <div className="space-y-2">
+                  {[
+                    { id: 'rzp_card', label: 'Cards (Visa, Mastercard, RuPay)', desc: 'Pay via simulated credit/debit card', icon: '💳' },
+                    { id: 'rzp_upi', label: 'UPI (Google Pay, PhonePe, Paytm)', desc: 'Instant transfer via simulated VPA', icon: '⚡' },
+                    { id: 'rzp_net', label: 'Netbanking', desc: 'All popular banks supported', icon: '🏦' }
+                  ].map((method) => (
+                    <button
+                      key={method.id}
+                      onClick={() => {
+                        // Simulate payment processing on click
+                        const paymentBtn = document.getElementById('rzp-pay-btn');
+                        if (paymentBtn) paymentBtn.click();
+                      }}
+                      className="w-full p-3 text-left rounded-xl border border-zinc-200 hover:border-blue-500 hover:bg-blue-50/20 transition-all flex items-center justify-between"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className="text-xl">{method.icon}</span>
+                        <div>
+                          <p className="text-xs font-bold text-zinc-800">{method.label}</p>
+                          <p className="text-[9px] text-zinc-400">{method.desc}</p>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  id="rzp-pay-btn"
+                  onClick={() => {
+                    const btn = document.getElementById('rzp-pay-btn');
+                    btn.disabled = true;
+                    btn.innerHTML = `<span class="animate-pulse">Authorizing securely via Razorpay...</span>`;
+                    
+                    setTimeout(() => {
+                      btn.classList.remove('bg-emerald-600');
+                      btn.classList.add('bg-blue-600');
+                      btn.innerHTML = `✓ Payment Successful!`;
+                      
+                      setTimeout(() => {
+                        setShowRazorpayModal(false);
+                        
+                        // Execute transaction completion logic
+                        if (razorpayPurpose === 'load_wallet') {
+                          saveWalletBalance(walletBalance + parseFloat(razorpayAmount));
+                          addTransaction({
+                            id: 'tx_' + Math.random().toString(36).substring(2, 9),
+                            reference: 'load_' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+                            tripId: null,
+                            amount: parseFloat(razorpayAmount),
+                            currency: getCurrencySymbol() === '₹' ? 'INR' : 'USD',
+                            type: 'wallet_load',
+                            method: 'Razorpay Instant UPI',
+                            status: 'success',
+                            date: new Date().toISOString()
+                          });
+                          addSystemLog(`Razorpay: Loaded ${getCurrencySymbol()}${parseFloat(razorpayAmount).toFixed(2)} credits.`);
+                        } else if (razorpayCallback) {
+                          razorpayCallback();
+                        }
+                      }, 800);
+                    }, 1200);
+                  }}
+                  className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all shadow-md active:scale-95 text-center flex items-center justify-center"
+                >
+                  Pay Securely via Razorpay
+                </button>
+              </div>
+
+              <div className="text-center">
+                <span className="text-[9px] text-zinc-400 font-semibold flex items-center justify-center">
+                  🛡️ PCI-DSS Compliant 128-bit Encryption Key: {razorpayKey.slice(0, 15)}...
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* 1. LANDING VIEW: Sign In / Registration cards */}
       {!isLoggedIn && (
-        <div className="w-full h-full flex flex-col md:flex-row bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black overflow-y-auto">
+        <div className="w-full h-full flex flex-col md:flex-row bg-zinc-950 overflow-y-auto">
           
-          {/* Logo Brand Panel */}
-          <div className="w-full md:w-5/12 p-8 md:p-16 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-800 bg-slate-950/40 backdrop-blur-3xl">
+          {/* Left Panel - Brand */}
+          <div className="w-full md:w-5/12 p-8 md:p-16 flex flex-col justify-between border-b md:border-b-0 md:border-r border-zinc-900 bg-zinc-950/40 backdrop-blur-3xl relative">
+            <div className="absolute top-20 right-10 w-48 h-48 rounded-full bg-accent opacity-5 blur-[120px] pointer-events-none"></div>
+            
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <Car className="w-7 h-7 text-slate-950" />
+              <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
+                <Car className="w-7 h-7 text-zinc-950" />
               </div>
               <div>
-                <h1 className="text-3xl font-black tracking-wider bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-300 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-black tracking-wider text-white">
                   RIDEIT
                 </h1>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">
                   Modern Geofenced Dispatch Engine
                 </p>
               </div>
             </div>
 
-            <div className="space-y-6 my-12">
+            <div className="space-y-6 my-12 relative z-10">
               <h2 className="text-3xl md:text-4xl font-extrabold leading-tight text-white">
                 Premium spatial transport solutions.
               </h2>
-              <p className="text-sm text-slate-400 leading-relaxed">
+              <p className="text-sm text-zinc-400 leading-relaxed">
                 Experience precision routing, driver bidding, custom rates, and real-time mapping. Select a persona and log in to explore.
               </p>
             </div>
 
-            <div className="flex items-center space-x-4 text-xs text-slate-500 font-semibold border-t border-slate-900 pt-6">
+            <div className="flex items-center space-x-4 text-xs text-zinc-500 font-semibold border-t border-zinc-900 pt-6">
               <span className="flex items-center"><ShieldCheck className="w-4 h-4 text-emerald-400 mr-1.5" /> SECURE JWT</span>
               <span>•</span>
-              <span className="flex items-center"><Compass className="w-4 h-4 text-indigo-400 mr-1.5" /> GEOMAPPING</span>
+              <span className="flex items-center"><Compass className="w-4 h-4 text-accent mr-1.5" /> GEOMAPPING</span>
             </div>
           </div>
 
-          {/* Form and Selection Panel */}
+          {/* Right Panel - Auth Selection */}
           <div className="flex-1 p-8 md:p-16 flex flex-col justify-center max-w-2xl mx-auto w-full space-y-8">
             
             {/* Role Tab Selector */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select Access Persona</label>
+              <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Select Access Persona</label>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { id: 'rider', label: 'Rider Console', color: 'border-emerald-500/30 text-emerald-400' },
-                  { id: 'driver', label: 'Driver Telemetry', color: 'border-amber-500/30 text-amber-400' },
-                  { id: 'admin', label: 'Admin Panel', color: 'border-indigo-500/30 text-indigo-400' }
+                  { id: 'rider', label: 'Rider Console', theme: 'border-emerald-500/30 text-emerald-400' },
+                  { id: 'driver', label: 'Driver Telemetry', theme: 'border-amber-500/30 text-amber-400' },
+                  { id: 'admin', label: 'Admin Panel', theme: 'border-indigo-500/30 text-indigo-400' }
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -876,7 +1321,7 @@ export default function App() {
                       else if (item.id === 'driver') setLoginEmail('driver1@rideit.com');
                       else if (item.id === 'admin') setLoginEmail('admin@rideit.com');
                     }}
-                    className={`py-3.5 px-3 rounded-2xl border text-xs font-black transition-all flex flex-col items-center justify-center space-y-2 ${selectedRole === item.id ? 'bg-slate-900 border-white text-white shadow-xl shadow-white/5 scale-105' : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300'}`}
+                    className={`py-3.5 px-3 rounded-2xl border text-xs font-black transition-all flex flex-col items-center justify-center space-y-2 ${selectedRole === item.id ? 'bg-zinc-900 border-accent text-white shadow-accent' : 'bg-zinc-900/40 border-zinc-800 text-zinc-500 hover:text-zinc-300'}`}
                   >
                     <span>{item.label}</span>
                   </button>
@@ -884,35 +1329,35 @@ export default function App() {
               </div>
             </div>
 
-            {/* Login Section */}
-            <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-xl space-y-5">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            {/* Login Card */}
+            <div className="p-6 rounded-3xl bg-zinc-900/60 border border-zinc-800 backdrop-blur-xl space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
                 <div className="flex items-center space-x-2">
-                  <Unlock className="w-4 h-4 text-amber-400" />
-                  <span className="text-sm font-bold text-slate-200">Authenticate Email Profile</span>
+                  <Unlock className="w-4 h-4 text-accent" />
+                  <span className="text-sm font-bold text-zinc-200">Authenticate Email Profile</span>
                 </div>
-                <span className="text-[10px] bg-slate-800 font-mono text-slate-400 px-2 py-0.5 rounded-full uppercase">JWT Auth</span>
+                <span className="text-[10px] bg-zinc-800 font-mono text-zinc-400 px-2 py-0.5 rounded-full uppercase">JWT Auth</span>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400">Authorized Email Address</label>
+                  <label className="text-xs font-semibold text-zinc-400">Authorized Email Address</label>
                   <div className="relative">
                     <input 
                       type="email" 
                       value={loginEmail} 
                       onChange={(e) => setLoginEmail(e.target.value)}
                       placeholder="e.g. user@rideit.com"
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl py-3 pl-4 pr-10 text-sm focus:outline-none focus:border-amber-500 text-slate-200"
+                      className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl py-3 pl-4 pr-10 text-sm focus:outline-none focus:border-accent text-zinc-200 focus-ring-accent"
                       required
                     />
-                    <button type="submit" className="absolute right-3 top-3.5 text-amber-400 hover:text-amber-300">
+                    <button type="submit" className="absolute right-3 top-3.5 text-accent hover:text-white transition-all">
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold px-1">
+                <div className="flex items-center justify-between text-[11px] text-zinc-500 font-semibold px-1">
                   <span>Demo accounts pre-seeded</span>
                   <button 
                     type="button" 
@@ -921,7 +1366,7 @@ export default function App() {
                       else if (selectedRole === 'driver') setLoginEmail('driver1@rideit.com');
                       else if (selectedRole === 'admin') setLoginEmail('admin@rideit.com');
                     }}
-                    className="text-amber-500 hover:underline"
+                    className="text-accent hover:underline"
                   >
                     Reset default email
                   </button>
@@ -931,8 +1376,8 @@ export default function App() {
 
             {/* Registration Sections */}
             {selectedRole === 'rider' && (
-              <div className="p-6 rounded-3xl bg-slate-900/40 border border-slate-800/60 space-y-4">
-                <div className="text-sm font-bold text-emerald-400 flex items-center space-x-2">
+              <div className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/60 space-y-4">
+                <div className="text-sm font-bold text-accent flex items-center space-x-2">
                   <Plus className="w-4 h-4" />
                   <span>Create Rider Account</span>
                 </div>
@@ -942,7 +1387,7 @@ export default function App() {
                     placeholder="Full Name" 
                     value={riderForm.name}
                     onChange={(e) => setRiderForm({...riderForm, name: e.target.value})}
-                    className="bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs focus:outline-none focus:border-emerald-500"
+                    className="bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 px-4 text-xs focus:outline-none focus:border-accent focus-ring-accent text-zinc-200"
                     required
                   />
                   <input 
@@ -950,20 +1395,20 @@ export default function App() {
                     placeholder="Email Address" 
                     value={riderForm.email}
                     onChange={(e) => setRiderForm({...riderForm, email: e.target.value})}
-                    className="bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs focus:outline-none focus:border-emerald-500"
+                    className="bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 px-4 text-xs focus:outline-none focus:border-accent focus-ring-accent text-zinc-200"
                     required
                   />
                   <input 
                     type="tel" 
-                    placeholder="Phone (e.g. +15550005)" 
+                    placeholder="Phone (e.g. +919988776655)" 
                     value={riderForm.phone}
                     onChange={(e) => setRiderForm({...riderForm, phone: e.target.value})}
-                    className="bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs focus:outline-none focus:border-emerald-500 md:col-span-2"
+                    className="bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 px-4 text-xs focus:outline-none focus:border-accent focus-ring-accent text-zinc-200 md:col-span-2"
                     required
                   />
                   <button 
                     type="submit" 
-                    className="w-full md:col-span-2 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-xs hover:shadow-lg hover:shadow-emerald-600/10 active:scale-95 transition-all"
+                    className="w-full md:col-span-2 py-3 rounded-xl bg-accent bg-accent-hover text-zinc-950 font-black text-xs hover:shadow-accent transition-all active:scale-95"
                   >
                     Register and Login
                   </button>
@@ -972,8 +1417,8 @@ export default function App() {
             )}
 
             {selectedRole === 'driver' && (
-              <div className="p-6 rounded-3xl bg-slate-900/40 border border-slate-800/60 space-y-4">
-                <div className="text-sm font-bold text-amber-400 flex items-center space-x-2">
+              <div className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/60 space-y-4">
+                <div className="text-sm font-bold text-accent flex items-center space-x-2">
                   <Plus className="w-4 h-4" />
                   <span>Apply as Driver Partner</span>
                 </div>
@@ -984,7 +1429,7 @@ export default function App() {
                       placeholder="Full Name" 
                       value={driverForm.name}
                       onChange={(e) => setDriverForm({...driverForm, name: e.target.value})}
-                      className="bg-slate-950 border border-slate-800 rounded-xl py-2 px-3.5 text-xs focus:outline-none focus:border-amber-500"
+                      className="bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-3.5 text-xs focus:outline-none focus:border-accent focus-ring-accent text-zinc-200"
                       required
                     />
                     <input 
@@ -992,15 +1437,15 @@ export default function App() {
                       placeholder="Email Address" 
                       value={driverForm.email}
                       onChange={(e) => setDriverForm({...driverForm, email: e.target.value})}
-                      className="bg-slate-950 border border-slate-800 rounded-xl py-2 px-3.5 text-xs focus:outline-none focus:border-amber-500"
+                      className="bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-3.5 text-xs focus:outline-none focus:border-accent focus-ring-accent text-zinc-200"
                       required
                     />
                     <input 
                       type="tel" 
-                      placeholder="Phone (+1555...)" 
+                      placeholder="Phone (+91...)" 
                       value={driverForm.phone}
                       onChange={(e) => setDriverForm({...driverForm, phone: e.target.value})}
-                      className="bg-slate-950 border border-slate-800 rounded-xl py-2 px-3.5 text-xs focus:outline-none focus:border-amber-500"
+                      className="bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-3.5 text-xs focus:outline-none focus:border-accent focus-ring-accent text-zinc-200"
                       required
                     />
                     <input 
@@ -1008,18 +1453,18 @@ export default function App() {
                       placeholder="Vehicle Plate Number" 
                       value={driverForm.vehicleNumber}
                       onChange={(e) => setDriverForm({...driverForm, vehicleNumber: e.target.value})}
-                      className="bg-slate-950 border border-slate-800 rounded-xl py-2 px-3.5 text-xs focus:outline-none focus:border-amber-500"
+                      className="bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-3.5 text-xs focus:outline-none focus:border-accent focus-ring-accent text-zinc-200"
                       required
                     />
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[10px] text-slate-400 font-bold block mb-1">Vehicle Type</label>
+                      <label className="text-[10px] text-zinc-400 font-bold block mb-1">Vehicle Type</label>
                       <select 
                         value={driverForm.vehicleType} 
                         onChange={(e) => setDriverForm({...driverForm, vehicleType: e.target.value, vehicleImage: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-2 text-xs text-slate-200"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-2 text-xs text-zinc-200 focus:outline-none focus:border-accent"
                       >
                         <option value="bike">Bike</option>
                         <option value="sedan">Sedan</option>
@@ -1028,31 +1473,31 @@ export default function App() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-400 font-bold block mb-1">Base Fare ($ / ₹)</label>
+                      <label className="text-[10px] text-zinc-400 font-bold block mb-1">Base Fare</label>
                       <input 
                         type="number" 
                         step="0.1" 
                         value={driverForm.baseFare}
                         onChange={(e) => setDriverForm({...driverForm, baseFare: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-2 text-xs focus:outline-none focus:border-amber-500"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-2 text-xs focus:outline-none focus:border-accent text-zinc-200"
                         required
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-400 font-bold block mb-1">Rate per KM</label>
+                      <label className="text-[10px] text-zinc-400 font-bold block mb-1">Rate per KM</label>
                       <input 
                         type="number" 
                         step="0.1" 
                         value={driverForm.perKmRate}
                         onChange={(e) => setDriverForm({...driverForm, perKmRate: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-2 text-xs focus:outline-none focus:border-amber-500"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-2 text-xs focus:outline-none focus:border-accent text-zinc-200"
                         required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-400 font-bold block mb-1.5">Vehicle Avatar Model</label>
+                    <label className="text-[10px] text-zinc-400 font-bold block mb-1.5">Vehicle Avatar Model</label>
                     <div className="grid grid-cols-4 gap-2">
                       {[
                         { id: 'bike', label: 'Bike Taxi', icon: '🏍️' },
@@ -1064,7 +1509,7 @@ export default function App() {
                           key={avatar.id}
                           type="button"
                           onClick={() => setDriverForm({...driverForm, vehicleImage: avatar.id})}
-                          className={`py-2 rounded-xl border flex flex-col items-center justify-center text-xs transition-all ${driverForm.vehicleImage === avatar.id ? 'bg-amber-500/15 border-amber-500 text-amber-400' : 'bg-slate-950 border-slate-800 text-slate-400'}`}
+                          className={`py-2 rounded-xl border flex flex-col items-center justify-center text-xs transition-all ${driverForm.vehicleImage === avatar.id ? 'bg-accent/15 border-accent text-accent' : 'bg-zinc-950 border-zinc-850 text-zinc-400'}`}
                         >
                           <span className="text-xl mb-1">{avatar.icon}</span>
                           <span className="text-[10px] font-bold">{avatar.label}</span>
@@ -1075,7 +1520,7 @@ export default function App() {
 
                   <button 
                     type="submit" 
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950 font-black text-xs hover:shadow-lg hover:shadow-amber-600/10 active:scale-95 transition-all"
+                    className="w-full py-3 rounded-xl bg-accent bg-accent-hover text-zinc-950 font-black text-xs hover:shadow-accent transition-all active:scale-95"
                   >
                     Submit Application
                   </button>
@@ -1091,53 +1536,158 @@ export default function App() {
       {isLoggedIn && userProfile && (
         <div className="w-full h-full flex flex-col md:flex-row overflow-hidden relative">
           
-          {/* LEFT SIDEBAR CONTROLS COLUMN */}
-          <div className="w-full md:w-[480px] h-full flex flex-col border-r border-slate-900 bg-slate-950 overflow-y-auto space-y-5">
+          {/* FAR-LEFT NAVIGATION SIDEBAR */}
+          <div className="w-full md:w-20 bg-zinc-900 border-b md:border-b-0 md:border-r border-zinc-800 flex flex-row md:flex-col items-center justify-between p-4 md:py-8 z-30">
             
-            {/* Universal Profile Header */}
-            <div className="p-6 border-b border-slate-900 flex items-center justify-between bg-slate-950/60 backdrop-blur-md sticky top-0 z-50">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center shadow-lg">
-                  <Car className="w-6 h-6 text-slate-950" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black tracking-wider text-white">RIDEIT</h2>
-                  <p className="text-[9px] text-slate-500 font-black tracking-widest uppercase">
-                    {userProfile.role} mode
-                  </p>
-                </div>
+            {/* Header / Brand Avatar */}
+            <div className="flex md:flex-col items-center space-x-3 md:space-x-0 md:space-y-6">
+              <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
+                <Car className="w-7 h-7 text-zinc-950" />
               </div>
-              <button 
+              <div className="hidden md:block text-center">
+                <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">
+                  {userProfile.role.slice(0, 5)}
+                </span>
+              </div>
+            </div>
+
+            {/* Middle Icons Group (Nav tabs) */}
+            <div className="flex md:flex-col items-center justify-center space-x-2 md:space-x-0 md:space-y-5 flex-1 md:my-8">
+              
+              {/* TAB 1: BOOK RIDE / DISPATCH / TELEMETRY */}
+              <button
+                onClick={() => setActiveTab(userProfile.role === 'rider' ? 'book' : (userProfile.role === 'driver' ? 'telemetry' : 'console'))}
+                className={`p-3 rounded-xl transition-all relative group ${
+                  activeTab === 'book' || activeTab === 'telemetry' || activeTab === 'console'
+                    ? 'bg-zinc-800 text-accent shadow-inner'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                }`}
+                title="Dashboard Console"
+              >
+                {userProfile.role === 'rider' && <MapPin className="w-5 h-5" />}
+                {userProfile.role === 'driver' && <Navigation className="w-5 h-5" />}
+                {userProfile.role === 'admin' && <Layers className="w-5 h-5" />}
+                
+                {/* Active Indicator bar */}
+                {(activeTab === 'book' || activeTab === 'telemetry' || activeTab === 'console') && (
+                  <span className="absolute left-0 top-3 bottom-3 w-1 bg-accent rounded-r hidden md:block"></span>
+                )}
+              </button>
+
+              {/* TAB 2: RIDE HISTORY */}
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`p-3 rounded-xl transition-all relative group ${
+                  activeTab === 'history'
+                    ? 'bg-zinc-800 text-accent shadow-inner'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                }`}
+                title="Ride History"
+              >
+                <Clock className="w-5 h-5" />
+                {activeTab === 'history' && (
+                  <span className="absolute left-0 top-3 bottom-3 w-1 bg-accent rounded-r hidden md:block"></span>
+                )}
+              </button>
+
+              {/* TAB 3: PAYMENTS & WALLET */}
+              <button
+                onClick={() => setActiveTab('payment')}
+                className={`p-3 rounded-xl transition-all relative group ${
+                  activeTab === 'payment'
+                    ? 'bg-zinc-800 text-accent shadow-inner'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                }`}
+                title="Payments & Balance"
+              >
+                <CreditCard className="w-5 h-5" />
+                {activeTab === 'payment' && (
+                  <span className="absolute left-0 top-3 bottom-3 w-1 bg-accent rounded-r hidden md:block"></span>
+                )}
+              </button>
+
+              {/* TAB 4: TRANSACTION LEDGER */}
+              <button
+                onClick={() => setActiveTab('transactions')}
+                className={`p-3 rounded-xl transition-all relative group ${
+                  activeTab === 'transactions'
+                    ? 'bg-zinc-800 text-accent shadow-inner'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                }`}
+                title="Transactions Ledger"
+              >
+                <Coins className="w-5 h-5" />
+                {activeTab === 'transactions' && (
+                  <span className="absolute left-0 top-3 bottom-3 w-1 bg-accent rounded-r hidden md:block"></span>
+                )}
+              </button>
+
+              {/* TAB 5: SETTINGS */}
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`p-3 rounded-xl transition-all relative group ${
+                  activeTab === 'settings'
+                    ? 'bg-zinc-800 text-accent shadow-inner'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                }`}
+                title="System Settings"
+              >
+                <Sliders className="w-5 h-5" />
+                {activeTab === 'settings' && (
+                  <span className="absolute left-0 top-3 bottom-3 w-1 bg-accent rounded-r hidden md:block"></span>
+                )}
+              </button>
+
+            </div>
+
+            {/* Bottom logout */}
+            <div className="flex md:flex-col items-center justify-end">
+              <button
                 onClick={handleLogout}
-                className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300 hover:bg-rose-500/5 active:scale-95 transition-all"
+                className="p-3 rounded-xl text-zinc-500 hover:text-rose-400 hover:bg-rose-500/5 transition-all active:scale-95"
                 title="Sign Out Session"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Dynamic Dashboard Sidebar Panel based on Role */}
+          </div>
+
+          {/* LEFT SIDEBAR CONTROLS COLUMN (SUB-SIDEBAR) */}
+          <div className="w-full md:w-[440px] h-full flex flex-col border-r border-zinc-900 bg-zinc-950 overflow-y-auto space-y-5 select-none z-20">
+            
+            {/* Tab header */}
+            <div className="p-6 border-b border-zinc-900 flex justify-between items-center bg-zinc-950/60 backdrop-blur-md sticky top-0 z-50">
+              <div>
+                <h2 className="text-xl font-black tracking-wide text-white capitalize">
+                  {activeTab === 'book' ? 'Book a Ride' : (activeTab === 'telemetry' ? 'Driver Console' : (activeTab === 'console' ? 'Admin Control' : activeTab === 'history' ? 'Ride History' : activeTab === 'payment' ? 'Payments & Wallet' : activeTab === 'transactions' ? 'Transactions' : 'Theme Settings'))}
+                </h2>
+                <p className="text-[10px] text-zinc-500 font-bold tracking-wider uppercase mt-0.5">
+                  {userProfile.name} • {userProfile.role.toUpperCase()}
+                </p>
+              </div>
+            </div>
+
             <div className="flex-1 px-6 pb-6 space-y-5">
 
-              {/* A. RIDER DASHBOARD */}
-              {userProfile.role === 'rider' && (
+              {/* VIEW A: BOOK RIDE (Rider booking console) */}
+              {activeTab === 'book' && userProfile.role === 'rider' && (
                 <div className="space-y-5">
-                  <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                    <div className="flex items-center space-x-2 pb-2 border-b border-slate-800">
-                      <User className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-bold text-slate-200">Request Spatial Booking</span>
+                  <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-4 shadow-sm">
+                    <div className="flex items-center space-x-2 pb-2 border-b border-zinc-850">
+                      <User className="w-4 h-4 text-accent" />
+                      <span className="text-sm font-bold text-zinc-200">Request Spatial Booking</span>
                     </div>
 
-                    {/* SEARCH FOR PICKUP / DROPOFF */}
                     <div className="space-y-4 relative">
                       
                       {/* Pickup Input */}
                       <div className="space-y-1 relative">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pickup Point</label>
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Pickup Point</label>
                         <div className="relative">
                           <input 
                             type="text"
-                            placeholder="Type pickup location landmark..."
+                            placeholder="Search pickup location..."
                             value={pickupSearchText}
                             onChange={(e) => {
                               setPickupSearchText(e.target.value);
@@ -1147,17 +1697,17 @@ export default function App() {
                               setShowPickupSuggestions(true);
                               setShowDropoffSuggestions(false);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3.5 pl-4 pr-10 text-xs text-zinc-200 focus:outline-none focus:border-accent focus-ring-accent"
                             disabled={!!activeTrip}
                           />
-                          <Search className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-2.5" />
+                          <Search className="w-4 h-4 text-zinc-500 absolute right-3.5 top-3.5" />
                         </div>
 
                         {/* Pickup Autocomplete Suggestions list */}
                         {showPickupSuggestions && (pickupSuggestions.length > 0 || isPickupSearching || filteredPickupLandmarks.length > 0) && (
-                          <div className="absolute left-0 right-0 mt-1 bg-slate-900 border border-slate-800 rounded-xl max-h-48 overflow-y-auto z-[9999] shadow-2xl p-1.5 space-y-1">
+                          <div className="absolute left-0 right-0 mt-1 bg-zinc-900 border border-zinc-800 rounded-xl max-h-48 overflow-y-auto z-[9999] shadow-2xl p-1.5 space-y-1">
                             {isPickupSearching && (
-                              <div className="p-2 text-center text-xs text-slate-500 italic">Searching locations...</div>
+                              <div className="p-2 text-center text-xs text-zinc-500 italic">Searching locations...</div>
                             )}
                             {!isPickupSearching && pickupSuggestions.map((lm, idx) => (
                               <button
@@ -1169,10 +1719,10 @@ export default function App() {
                                   setShowPickupSuggestions(false);
                                   addSystemLog(`Pickup address selected: ${lm.name}`);
                                 }}
-                                className="w-full py-2 px-3 text-left rounded-lg text-xs hover:bg-slate-850 hover:text-white text-slate-200 flex items-center justify-between"
+                                className="w-full py-2.5 px-3 text-left rounded-lg text-xs hover:bg-zinc-800 hover:text-white text-zinc-200 flex items-center justify-between"
                               >
-                                <span className="truncate">{lm.name}</span>
-                                <span className="text-[8px] bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded uppercase font-bold">GPS</span>
+                                <span className="truncate mr-2">{lm.name}</span>
+                                <span className="text-[8px] bg-zinc-800 text-accent px-1.5 py-0.5 rounded uppercase font-black shrink-0">GPS</span>
                               </button>
                             ))}
                             {!isPickupSearching && pickupSuggestions.length === 0 && filteredPickupLandmarks.map((lm, idx) => (
@@ -1185,10 +1735,10 @@ export default function App() {
                                   setShowPickupSuggestions(false);
                                   addSystemLog(`Pickup landmark set: ${lm.name}`);
                                 }}
-                                className="w-full py-2 px-3 text-left rounded-lg text-xs hover:bg-slate-850 hover:text-white text-slate-300 flex items-center justify-between"
+                                className="w-full py-2.5 px-3 text-left rounded-lg text-xs hover:bg-zinc-800 hover:text-white text-zinc-300 flex items-center justify-between"
                               >
-                                <span className="truncate">{lm.name}</span>
-                                <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded uppercase font-bold">{lm.city}</span>
+                                <span className="truncate mr-2">{lm.name}</span>
+                                <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase font-black shrink-0">{lm.city}</span>
                               </button>
                             ))}
                           </div>
@@ -1197,11 +1747,11 @@ export default function App() {
 
                       {/* Dropoff Input */}
                       <div className="space-y-1 relative">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dropoff Point</label>
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Dropoff Point</label>
                         <div className="relative">
                           <input 
                             type="text"
-                            placeholder="Type dropoff location landmark..."
+                            placeholder="Search dropoff location..."
                             value={dropoffSearchText}
                             onChange={(e) => {
                               setDropoffSearchText(e.target.value);
@@ -1211,17 +1761,17 @@ export default function App() {
                               setShowDropoffSuggestions(true);
                               setShowPickupSuggestions(false);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 focus:outline-none focus:border-rose-500"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3.5 pl-4 pr-10 text-xs text-zinc-200 focus:outline-none focus:border-accent focus-ring-accent"
                             disabled={!!activeTrip}
                           />
-                          <Search className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-2.5" />
+                          <Search className="w-4 h-4 text-zinc-500 absolute right-3.5 top-3.5" />
                         </div>
 
                         {/* Dropoff Autocomplete Suggestions list */}
                         {showDropoffSuggestions && (dropoffSuggestions.length > 0 || isDropoffSearching || filteredDropoffLandmarks.length > 0) && (
-                          <div className="absolute left-0 right-0 mt-1 bg-slate-900 border border-slate-800 rounded-xl max-h-48 overflow-y-auto z-[9999] shadow-2xl p-1.5 space-y-1">
+                          <div className="absolute left-0 right-0 mt-1 bg-zinc-900 border border-zinc-800 rounded-xl max-h-48 overflow-y-auto z-[9999] shadow-2xl p-1.5 space-y-1">
                             {isDropoffSearching && (
-                              <div className="p-2 text-center text-xs text-slate-500 italic">Searching locations...</div>
+                              <div className="p-2 text-center text-xs text-zinc-500 italic">Searching locations...</div>
                             )}
                             {!isDropoffSearching && dropoffSuggestions.map((lm, idx) => (
                               <button
@@ -1233,10 +1783,10 @@ export default function App() {
                                   setShowDropoffSuggestions(false);
                                   addSystemLog(`Dropoff address selected: ${lm.name}`);
                                 }}
-                                className="w-full py-2 px-3 text-left rounded-lg text-xs hover:bg-slate-850 hover:text-white text-slate-200 flex items-center justify-between"
+                                className="w-full py-2.5 px-3 text-left rounded-lg text-xs hover:bg-zinc-800 hover:text-white text-zinc-200 flex items-center justify-between"
                               >
-                                <span className="truncate">{lm.name}</span>
-                                <span className="text-[8px] bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded uppercase font-bold">GPS</span>
+                                <span className="truncate mr-2">{lm.name}</span>
+                                <span className="text-[8px] bg-zinc-800 text-accent px-1.5 py-0.5 rounded uppercase font-black shrink-0">GPS</span>
                               </button>
                             ))}
                             {!isDropoffSearching && dropoffSuggestions.length === 0 && filteredDropoffLandmarks.map((lm, idx) => (
@@ -1249,55 +1799,87 @@ export default function App() {
                                   setShowDropoffSuggestions(false);
                                   addSystemLog(`Dropoff landmark set: ${lm.name}`);
                                 }}
-                                className="w-full py-2 px-3 text-left rounded-lg text-xs hover:bg-slate-850 hover:text-white text-slate-300 flex items-center justify-between"
+                                className="w-full py-2.5 px-3 text-left rounded-lg text-xs hover:bg-zinc-800 hover:text-white text-zinc-300 flex items-center justify-between"
                               >
-                                <span className="truncate">{lm.name}</span>
-                                <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded uppercase font-bold">{lm.city}</span>
+                                <span className="truncate mr-2">{lm.name}</span>
+                                <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase font-black shrink-0">{lm.city}</span>
                               </button>
                             ))}
                           </div>
                         )}
                       </div>
 
-                      {/* Choose on Map switch */}
+                      {/* Map Clicking Mode Selector */}
                       {!activeTrip && (
-                        <div className="flex items-center justify-between pt-2">
-                          <span className="text-xs text-slate-400 font-semibold">Or interact directly with the map:</span>
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-xs text-zinc-500 font-semibold">Or interact directly with the map:</span>
                           <button
                             type="button"
                             onClick={() => {
                               setIsChooseOnMapActive(!isChooseOnMapActive);
                               setRiderSelectionMode('pickup');
                             }}
-                            className={`py-1.5 px-3.5 rounded-xl border text-[11px] font-black transition-all ${isChooseOnMapActive ? 'bg-amber-500 border-amber-500 text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-300'}`}
+                            className={`py-1.5 px-3.5 rounded-xl border text-[11px] font-black transition-all ${isChooseOnMapActive ? 'bg-accent border-accent text-zinc-950' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'}`}
                           >
-                            {isChooseOnMapActive ? `Choosing ${riderSelectionMode.toUpperCase()} on map` : 'Choose on map'}
+                            {isChooseOnMapActive ? `Pinning ${riderSelectionMode.toUpperCase()} on map` : 'Choose on map'}
                           </button>
                         </div>
                       )}
 
                     </div>
 
-                    {/* Coordinates verification display */}
-                    <div className="space-y-2 p-3 bg-slate-950 rounded-xl border border-slate-800/80 text-[10px] font-mono">
-                      <div className="flex justify-between items-center text-slate-400">
+                    {/* Verified coordinates status bar */}
+                    <div className="space-y-2 p-3 bg-zinc-950 rounded-xl border border-zinc-850/80 text-[10px] font-mono">
+                      <div className="flex justify-between items-center text-zinc-400">
                         <span className="flex items-center"><CircleDot className="w-3 h-3 text-emerald-400 mr-1.5" /> Pickup:</span>
-                        <span className="text-slate-300 max-w-[240px] truncate">
-                          {pickup ? pickup.name : 'Not selected'}
+                        <span className="text-zinc-200 max-w-[260px] truncate">
+                          {pickup ? pickup.name : 'Awaiting Selection'}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center text-slate-400">
+                      <div className="flex justify-between items-center text-zinc-400">
                         <span className="flex items-center"><MapPin className="w-3 h-3 text-rose-500 mr-1.5" /> Dropoff:</span>
-                        <span className="text-slate-300 max-w-[240px] truncate">
-                          {dropoff ? dropoff.name : 'Not selected'}
+                        <span className="text-zinc-200 max-w-[260px] truncate">
+                          {dropoff ? dropoff.name : 'Awaiting Selection'}
                         </span>
                       </div>
                     </div>
 
-                    {/* Vehicle Type Choice */}
+                    {/* Payment Method Selector */}
                     {pickup && dropoff && !activeTrip && (
-                      <div className="space-y-2 pt-2 border-t border-slate-800">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Choose Class & Estimated Fare</label>
+                      <div className="space-y-1.5 pt-2 border-t border-zinc-850">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Choose Payment Method</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('wallet')}
+                            className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all ${paymentMethod === 'wallet' ? 'bg-accent/10 border-accent text-white shadow-sm' : 'bg-zinc-950 border-zinc-850 text-zinc-400'}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span>Wallet Balance</span>
+                              <Coins className="w-4 h-4 text-accent" />
+                            </div>
+                            <span className="text-[10px] text-zinc-500 block mt-1">Available: {getCurrencySymbol()}{walletBalance.toFixed(2)}</span>
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('razorpay')}
+                            className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all ${paymentMethod === 'razorpay' ? 'bg-accent/10 border-accent text-white shadow-sm' : 'bg-zinc-950 border-zinc-850 text-zinc-400'}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span>Razorpay Direct</span>
+                              <CreditCard className="w-4 h-4 text-accent" />
+                            </div>
+                            <span className="text-[10px] text-zinc-500 block mt-1">Direct pay via UPI/Card</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Vehicle Type Choice with Fares */}
+                    {pickup && dropoff && !activeTrip && (
+                      <div className="space-y-2 pt-2 border-t border-zinc-850">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Choose Vehicle Class & Fare</label>
                         <div className="grid grid-cols-2 gap-2">
                           {['bike', 'sedan', 'suv', 'auto'].map((cType) => {
                             const fare = estimatedFares ? estimatedFares[cType] : 0;
@@ -1306,14 +1888,14 @@ export default function App() {
                                 key={cType}
                                 type="button"
                                 onClick={() => setVehicleType(cType)}
-                                className={`p-2.5 rounded-xl border text-left transition-all ${vehicleType === cType ? 'bg-amber-500/10 border-amber-500 text-white' : 'bg-slate-950 border-slate-850 hover:bg-slate-900 text-slate-400'}`}
+                                className={`p-2.5 rounded-xl border text-left transition-all ${vehicleType === cType ? 'bg-accent/15 border-accent text-white shadow-sm' : 'bg-zinc-950 border-zinc-850 hover:bg-zinc-900/60 text-zinc-400'}`}
                               >
                                 <div className="flex items-center justify-between">
                                   <span className="text-lg">{vehicleDetails[cType].emoji}</span>
-                                  <span className="text-xs font-black text-amber-400">{getCurrencySymbol()}{fare.toFixed(2)}</span>
+                                  <span className="text-xs font-black text-accent">{getCurrencySymbol()}{fare.toFixed(2)}</span>
                                 </div>
-                                <div className="mt-1 font-bold text-[10px] capitalize text-slate-200">{vehicleDetails[cType].label}</div>
-                                <div className="text-[8px] text-slate-500 leading-tight mt-0.5">{vehicleDetails[cType].desc}</div>
+                                <div className="mt-1 font-bold text-[10px] capitalize text-zinc-200">{vehicleDetails[cType].label}</div>
+                                <div className="text-[8px] text-zinc-500 leading-tight mt-0.5">{vehicleDetails[cType].desc}</div>
                               </button>
                             );
                           })}
@@ -1326,20 +1908,20 @@ export default function App() {
                       <button
                         onClick={requestRide}
                         disabled={!pickup || !dropoff}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-xs shadow-lg disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-emerald-600/10 active:scale-95 transition-all"
+                        className="w-full py-3 rounded-xl bg-accent bg-accent-hover text-zinc-950 font-black text-xs shadow-md disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-accent transition-all active:scale-95"
                       >
-                        Book Ride Offer
+                        Request Spatial Booking
                       </button>
                     ) : (
-                      <div className="space-y-3 pt-2 border-t border-slate-800">
-                        <div className="flex justify-between items-center text-xs p-3 bg-slate-950 rounded-xl border border-slate-800">
-                          <span className="text-slate-400">Ride Status:</span>
-                          <span className="font-extrabold text-amber-400 uppercase tracking-wider animate-pulse">{activeTrip.status}</span>
+                      <div className="space-y-3 pt-2 border-t border-zinc-850">
+                        <div className="flex justify-between items-center text-xs p-3.5 bg-zinc-950 rounded-xl border border-zinc-850">
+                          <span className="text-zinc-500 font-semibold">Ride Status:</span>
+                          <span className="font-extrabold text-accent uppercase tracking-wider animate-pulse">{activeTrip.status}</span>
                         </div>
                         {activeTrip.status === 'completed' && (
                           <button
                             onClick={resetRiderState}
-                            className="w-full py-2.5 rounded-xl border border-slate-800 hover:bg-slate-850 text-xs font-bold text-slate-300"
+                            className="w-full py-3 rounded-xl border border-zinc-800 hover:bg-zinc-900 text-xs font-bold text-zinc-300"
                           >
                             Order Another Ride
                           </button>
@@ -1350,11 +1932,11 @@ export default function App() {
 
                   {/* Rider log outputs */}
                   {riderLogs.length > 0 && (
-                    <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Trip State Operations</span>
-                      <div className="w-full max-h-40 overflow-y-auto bg-slate-950 p-3.5 rounded-xl border border-slate-850 space-y-2">
+                    <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-2">
+                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Trip State Operations</span>
+                      <div className="w-full max-h-40 overflow-y-auto bg-zinc-950 p-3.5 rounded-xl border border-zinc-850 space-y-2">
                         {riderLogs.map((logStr, i) => (
-                          <p key={i} className="text-[10px] font-semibold text-emerald-400 font-mono leading-relaxed">
+                          <p key={i} className="text-[10px] font-semibold text-accent font-mono leading-relaxed">
                             &gt; {logStr}
                           </p>
                         ))}
@@ -1364,8 +1946,8 @@ export default function App() {
                 </div>
               )}
 
-              {/* B. DRIVER DASHBOARD */}
-              {userProfile.role === 'driver' && (
+              {/* VIEW B: TELEMETRY CONSOLE (Driver console) */}
+              {activeTab === 'telemetry' && userProfile.role === 'driver' && (
                 <div className="space-y-5">
                   
                   {/* Approval Check Alert banner */}
@@ -1375,40 +1957,40 @@ export default function App() {
                         <ShieldAlert className="w-4 h-4 flex-shrink-0 text-rose-400" />
                         <span>Awaiting Admin Approval</span>
                       </div>
-                      <p className="leading-relaxed">
+                      <p className="leading-relaxed text-[11px] text-zinc-400">
                         Your driver profile is currently pending administrator verification. You will be able to go online and accept spatial ride requests once approved.
                       </p>
                     </div>
                   )}
 
                   {/* Driver control panel */}
-                  <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                    <div className="flex items-center space-x-2 pb-2 border-b border-slate-800 justify-between">
+                  <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-4">
+                    <div className="flex items-center space-x-2 pb-2 border-b border-zinc-800 justify-between">
                       <div className="flex items-center space-x-2">
-                        <Navigation className="w-4 h-4 text-amber-400" />
-                        <span className="text-sm font-bold text-slate-200">Driver Telemetry Console</span>
+                        <Navigation className="w-4 h-4 text-accent" />
+                        <span className="text-sm font-bold text-zinc-200">Driver Telemetry Console</span>
                       </div>
-                      <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${isDriverOnline ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-500'}`}>
+                      <span className={`text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full ${isDriverOnline ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shadow-sm shadow-emerald-500/10' : 'bg-zinc-800 text-zinc-500'}`}>
                         {isDriverOnline ? 'Online' : 'Offline'}
                       </span>
                     </div>
 
                     {/* Driver details and Custom pricing overview */}
-                    <div className="grid grid-cols-2 gap-3 p-3 bg-slate-950 rounded-xl border border-slate-800/80 text-xs">
+                    <div className="grid grid-cols-2 gap-3 p-3.5 bg-zinc-950 rounded-xl border border-zinc-850 text-xs">
                       <div>
-                        <span className="text-[9px] text-slate-500 block uppercase font-bold">Vehicle details</span>
-                        <span className="font-bold text-slate-300">{driverProfile?.vehicle_number} ({driverProfile?.vehicle_type})</span>
+                        <span className="text-[9px] text-zinc-500 block uppercase font-bold">Vehicle details</span>
+                        <span className="font-bold text-zinc-300">{driverProfile?.vehicle_number} ({driverProfile?.vehicle_type})</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-slate-500 block uppercase font-bold">Base Fare</span>
-                        <span className="font-bold text-slate-300">{getCurrencySymbol()}{driverProfile?.base_fare?.toFixed(2)}</span>
+                        <span className="text-[9px] text-zinc-500 block uppercase font-bold">Base Fare</span>
+                        <span className="font-bold text-zinc-300">{getCurrencySymbol()}{driverProfile?.base_fare?.toFixed(2)}</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-slate-500 block uppercase font-bold">Per KM Rate</span>
-                        <span className="font-bold text-slate-300">{getCurrencySymbol()}{driverProfile?.per_km_rate?.toFixed(2)}/km</span>
+                        <span className="text-[9px] text-zinc-500 block uppercase font-bold">Per KM Rate</span>
+                        <span className="font-bold text-zinc-300">{getCurrencySymbol()}{driverProfile?.per_km_rate?.toFixed(2)}/km</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-slate-500 block uppercase font-bold">Avatar Class</span>
+                        <span className="text-[9px] text-zinc-500 block uppercase font-bold">Avatar Class</span>
                         <span className="text-lg">{driverProfile ? vehicleDetails[driverProfile.vehicle_image]?.emoji : '🚗'}</span>
                       </div>
                     </div>
@@ -1417,7 +1999,7 @@ export default function App() {
                     {driverProfile?.is_approved && (
                       <button
                         onClick={handleDriverOnlineToggle}
-                        className={`w-full py-3 rounded-xl font-bold text-xs shadow-lg transition-all active:scale-95 ${isDriverOnline ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/10' : 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 hover:shadow-amber-500/10'}`}
+                        className={`w-full py-3 rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 ${isDriverOnline ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/10' : 'bg-accent bg-accent-hover text-zinc-950 hover:shadow-accent'}`}
                       >
                         {isDriverOnline ? 'Disconnect Telemetry (Go Offline)' : 'Establish Connection (Go Online)'}
                       </button>
@@ -1425,12 +2007,12 @@ export default function App() {
 
                     {/* GPS Coordinates stream */}
                     {isDriverOnline && (
-                      <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800/80 text-xs space-y-1">
-                        <div className="flex justify-between items-center text-slate-400">
+                      <div className="p-3.5 bg-zinc-950 rounded-xl border border-zinc-850 text-xs space-y-1.5">
+                        <div className="flex justify-between items-center text-zinc-400">
                           <span>Driver Coordinates:</span>
-                          <span className="font-mono text-amber-400 font-extrabold">{driverLocation.Latitude.toFixed(5)}, {driverLocation.Longitude.toFixed(5)}</span>
+                          <span className="font-mono text-accent font-extrabold">{driverLocation.Latitude.toFixed(5)}, {driverLocation.Longitude.toFixed(5)}</span>
                         </div>
-                        <p className="text-[9px] text-slate-500 leading-tight">
+                        <p className="text-[9px] text-zinc-500 leading-tight">
                           *To simulate movement, click anywhere inside the map area.
                         </p>
                       </div>
@@ -1439,18 +2021,18 @@ export default function App() {
 
                   {/* Active Ride Offer popup */}
                   {driverTripOffer && (
-                    <div className="p-5 rounded-2xl border border-amber-500/30 bg-amber-500/5 animate-pulse space-y-3">
-                      <div className="flex items-center space-x-2 text-xs font-black text-amber-400 uppercase tracking-widest">
+                    <div className="p-5 rounded-2xl border border-accent/30 bg-accent/5 animate-pulse space-y-3 shadow-accent">
+                      <div className="flex items-center space-x-2 text-xs font-black text-accent uppercase tracking-widest">
                         <Layers className="w-4 h-4" />
                         <span>Incoming Spatial Ride Offer</span>
                       </div>
-                      <div className="text-xs text-slate-400 space-y-1 p-3 bg-slate-950/80 rounded-xl border border-slate-800">
+                      <div className="text-xs text-zinc-400 space-y-1 p-3.5 bg-zinc-950/80 rounded-xl border border-zinc-850">
                         <p>Estimated Fare: <span className="text-emerald-400 font-extrabold text-sm">{getCurrencySymbol()}{driverTripOffer.fare.toFixed(2)}</span></p>
-                        <p className="text-[10px] mt-1 text-slate-500 font-mono">Trip: {driverTripOffer.trip_id.slice(0, 8)}...</p>
+                        <p className="text-[10px] mt-1 text-zinc-500 font-mono">Trip: {driverTripOffer.trip_id.slice(0, 8)}...</p>
                       </div>
                       <button
                         onClick={acceptRide}
-                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-xs shadow-lg active:scale-95 transition-all"
+                        className="w-full py-3 rounded-xl bg-accent bg-accent-hover text-zinc-950 font-black text-xs shadow-md active:scale-95 transition-all"
                       >
                         Accept Ride Offer & Recalculate
                       </button>
@@ -1459,31 +2041,31 @@ export default function App() {
 
                   {/* Accepted trip workflow steps */}
                   {driverActiveTrip && (
-                    <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-                      <div className="flex justify-between items-center text-xs font-bold pb-2 border-b border-slate-800">
-                        <span className="text-slate-400">Assigned Trip Status:</span>
-                        <span className="text-amber-400 uppercase font-black tracking-wider">{driverActiveTrip.status}</span>
+                    <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3">
+                      <div className="flex justify-between items-center text-xs font-bold pb-2 border-b border-zinc-800">
+                        <span className="text-zinc-500">Assigned Trip Status:</span>
+                        <span className="text-accent uppercase font-black tracking-wider animate-pulse">{driverActiveTrip.status}</span>
                       </div>
 
                       <div className="grid grid-cols-3 gap-2 pt-1">
                         <button
                           onClick={triggerDriverArrived}
                           disabled={driverActiveTrip.status !== 'accepted'}
-                          className="py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-bold hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[10px] uppercase"
+                          className="py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 font-bold hover:bg-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[10px] uppercase focus-ring-accent"
                         >
                           Arrived
                         </button>
                         <button
                           onClick={triggerDriverStartRide}
                           disabled={driverActiveTrip.status !== 'arrived'}
-                          className="py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-bold hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[10px] uppercase"
+                          className="py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 font-bold hover:bg-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[10px] uppercase focus-ring-accent"
                         >
                           Start
                         </button>
                         <button
                           onClick={triggerDriverCompleteRide}
                           disabled={driverActiveTrip.status !== 'en_route'}
-                          className="py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-black disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[10px] uppercase"
+                          className="py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[10px] uppercase focus-ring-accent"
                         >
                           Complete
                         </button>
@@ -1493,11 +2075,11 @@ export default function App() {
 
                   {/* Driver logs */}
                   {driverLogs.length > 0 && (
-                    <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Telemetry Event logs</span>
-                      <div className="w-full max-h-40 overflow-y-auto bg-slate-950 p-3.5 rounded-xl border border-slate-850 space-y-2">
+                    <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-2">
+                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Telemetry Event logs</span>
+                      <div className="w-full max-h-40 overflow-y-auto bg-zinc-950 p-3.5 rounded-xl border border-zinc-850 space-y-2">
                         {driverLogs.map((logStr, i) => (
-                          <p key={i} className="text-[10px] font-semibold text-amber-400 font-mono leading-relaxed">
+                          <p key={i} className="text-[10px] font-semibold text-accent font-mono leading-relaxed">
                             &gt; {logStr}
                           </p>
                         ))}
@@ -1508,21 +2090,21 @@ export default function App() {
                 </div>
               )}
 
-              {/* C. ADMINISTRATOR PANEL */}
-              {userProfile.role === 'admin' && (
+              {/* VIEW C: ADMIN CONSOLE (Verify Drivers & Geofence config) */}
+              {activeTab === 'console' && userProfile.role === 'admin' && (
                 <div className="space-y-5">
                   
                   {/* Admin Tab Switch */}
-                  <div className="grid grid-cols-2 gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800">
+                  <div className="grid grid-cols-2 gap-2 bg-zinc-900 p-1.5 rounded-xl border border-zinc-800">
                     <button
                       onClick={() => setAdminTab('drivers')}
-                      className={`py-2 text-[10px] font-black uppercase rounded-lg transition-all ${adminTab === 'drivers' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                      className={`py-2 text-[10px] font-black uppercase rounded-lg transition-all ${adminTab === 'drivers' ? 'bg-accent text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}
                     >
                       Verify Drivers
                     </button>
                     <button
                       onClick={() => setAdminTab('cities')}
-                      className={`py-2 text-[10px] font-black uppercase rounded-lg transition-all ${adminTab === 'cities' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                      className={`py-2 text-[10px] font-black uppercase rounded-lg transition-all ${adminTab === 'cities' ? 'bg-accent text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}
                     >
                       Geofence Config
                     </button>
@@ -1532,10 +2114,10 @@ export default function App() {
                   {adminTab === 'drivers' && (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registered Driver Profiles</span>
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Registered Driver Profiles</span>
                         <button 
                           onClick={() => fetchDrivers(token)}
-                          className="text-[10px] text-indigo-400 font-bold hover:underline flex items-center"
+                          className="text-[10px] text-accent font-bold hover:underline flex items-center"
                         >
                           <RefreshCw className="w-3 h-3 mr-1" /> Refresh
                         </button>
@@ -1543,33 +2125,33 @@ export default function App() {
 
                       <div className="space-y-3.5">
                         {driversList.length === 0 ? (
-                          <p className="text-xs text-slate-500 italic p-3 text-center">No drivers registered yet.</p>
+                          <p className="text-xs text-zinc-500 italic p-6 text-center bg-zinc-900 rounded-2xl border border-zinc-850">No drivers registered yet.</p>
                         ) : (
                           driversList.map((drv) => (
-                            <div key={drv.id} className="p-4 rounded-2xl bg-slate-900 border border-slate-850 space-y-3">
+                            <div key={drv.id} className="p-4 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-3">
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <h4 className="font-extrabold text-sm text-slate-200">{drv.user?.name || "Driver Profile"}</h4>
-                                  <p className="text-[10px] text-slate-500">{drv.user?.email || "No Email"}</p>
+                                  <h4 className="font-extrabold text-sm text-zinc-200">{drv.user?.name || "Driver Profile"}</h4>
+                                  <p className="text-[10px] text-zinc-500">{drv.user?.email || "No Email"}</p>
                                 </div>
-                                <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full ${drv.is_approved ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}>
+                                <span className={`text-[8px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${drv.is_approved ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}>
                                   {drv.is_approved ? 'Approved' : 'Pending'}
                                 </span>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-2 text-[10px] p-2.5 bg-slate-950 rounded-xl border border-slate-850/80 font-mono text-slate-400">
-                                <p>Vehicle: <span className="text-slate-200">{drv.vehicle_number}</span></p>
-                                <p>Class: <span className="text-slate-200 capitalize">{drv.vehicle_type}</span></p>
-                                <p>Base: <span className="text-emerald-400">{getCurrencySymbol()}{drv.base_fare?.toFixed(2)}</span></p>
-                                <p>KM Rate: <span className="text-emerald-400">{getCurrencySymbol()}{drv.per_km_rate?.toFixed(2)}</span></p>
+                              <div className="grid grid-cols-2 gap-2 text-[10px] p-2.5 bg-zinc-950 rounded-xl border border-zinc-850/80 font-mono text-zinc-400">
+                                <p>Plate: <span className="text-zinc-200">{drv.vehicle_number}</span></p>
+                                <p>Class: <span className="text-zinc-200 capitalize">{drv.vehicle_type}</span></p>
+                                <p>Base Fare: <span className="text-accent">{getCurrencySymbol()}{drv.base_fare?.toFixed(2)}</span></p>
+                                <p>Per KM: <span className="text-accent">{getCurrencySymbol()}{drv.per_km_rate?.toFixed(2)}</span></p>
                               </div>
 
                               {!drv.is_approved && (
                                 <button
                                   onClick={() => handleApproveDriver(drv.id)}
-                                  className="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all active:scale-95"
+                                  className="w-full py-2.5 rounded-xl bg-accent bg-accent-hover text-zinc-950 font-black text-xs transition-all active:scale-95"
                                 >
-                                  Approve Applications
+                                  Approve Application
                                 </button>
                               )}
                             </div>
@@ -1581,98 +2163,182 @@ export default function App() {
 
                   {/* Tab 2: Geofence Cities configuration */}
                   {adminTab === 'cities' && (
-                    <div className="space-y-4 p-5 rounded-2xl bg-slate-900 border border-slate-800">
+                    <div className="space-y-4 p-5 rounded-2xl bg-zinc-900 border border-zinc-850">
                       
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase block">City Region Name</label>
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase block">Select Operational City</label>
                         <select 
-                          value={cityName}
+                          value={selectedCityId}
                           onChange={(e) => {
-                            setCityName(e.target.value);
-                            // Adjust default currency & pricing defaults
-                            if (e.target.value === 'San Francisco') {
-                              setCityCurrency('USD');
-                              setCityBaseFare('5.00');
-                              setCityPerKmRate('2.00');
-                              setCityMatchingRadius('5.00');
-                            } else {
+                            const val = e.target.value;
+                            setSelectedCityId(val);
+                            if (val === 'new') {
+                              setIsNewCity(true);
+                              setCityName('');
                               setCityCurrency('INR');
                               setCityBaseFare('50.00');
                               setCityPerKmRate('15.00');
+                              setCityCommissionRate('10.00');
                               setCityMatchingRadius('8.00');
+                              setCityAllowedVehicles(['bike', 'sedan', 'suv', 'auto']);
+                              setPolygonPoints([]);
+                            } else {
+                              setIsNewCity(false);
+                              const city = cities.find(c => c.id === val);
+                              if (city) {
+                                setCityName(city.name);
+                                setCityCurrency(city.currency);
+                                setCityBaseFare(city.base_fare ? city.base_fare.toString() : '0');
+                                setCityPerKmRate(city.per_km_rate ? city.per_km_rate.toString() : '0');
+                                setCityCommissionRate(city.commission_rate ? city.commission_rate.toString() : '0');
+                                setCityMatchingRadius(city.matching_radius_km ? city.matching_radius_km.toString() : '5.00');
+                                setCityAllowedVehicles(city.allowed_vehicle_types || ['bike', 'sedan', 'suv', 'auto']);
+                                
+                                // Load boundary geofence
+                                if (city.boundary_geojson) {
+                                  try {
+                                    const geoJSON = typeof city.boundary_geojson === 'string' 
+                                      ? JSON.parse(city.boundary_geojson) 
+                                      : city.boundary_geojson;
+                                    if (geoJSON.type === 'Polygon' && geoJSON.coordinates && geoJSON.coordinates[0]) {
+                                      const pts = geoJSON.coordinates[0].map(pt => [pt[1], pt[0]]);
+                                      if (pts.length > 1 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1]) {
+                                        pts.pop();
+                                      }
+                                      setPolygonPoints(pts);
+                                    } else {
+                                      setPolygonPoints([]);
+                                    }
+                                  } catch (err) {
+                                    console.error("Error parsing boundary: ", err);
+                                    setPolygonPoints([]);
+                                  }
+                                } else {
+                                  setPolygonPoints([]);
+                                }
+                              }
                             }
                           }}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200"
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-3 text-xs text-zinc-200 focus:outline-none focus:border-accent"
                         >
-                          <option value="Bangalore">Bangalore (INR)</option>
-                          <option value="San Francisco">San Francisco (USD)</option>
-                          <option value="Mumbai">Mumbai (INR)</option>
+                          <option value="">-- Choose an existing city or add new --</option>
+                          {cities.map((city) => (
+                            <option key={city.id} value={city.id}>
+                              {city.name} ({city.currency})
+                            </option>
+                          ))}
+                          <option value="new">➕ Register a New City...</option>
                         </select>
                       </div>
 
+                      {isNewCity && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-zinc-400 uppercase block">New City Name</label>
+                          <input 
+                            type="text"
+                            placeholder="Enter city name (e.g. London)"
+                            value={cityName}
+                            onChange={(e) => setCityName(e.target.value)}
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 px-3 text-xs text-zinc-200 focus:outline-none focus:border-accent focus-ring-accent"
+                            required
+                          />
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase block">Currency</label>
+                          <label className="text-[9px] font-bold text-zinc-400 uppercase block">Currency</label>
                           <select 
                             value={cityCurrency}
                             onChange={(e) => setCityCurrency(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-2 text-xs text-slate-200"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 px-2 text-xs text-zinc-200 focus:outline-none focus:border-accent"
                           >
                             <option value="USD">USD ($)</option>
                             <option value="INR">INR (₹)</option>
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase block">Search Radius (KM)</label>
+                          <label className="text-[9px] font-bold text-zinc-400 uppercase block">Search Radius (KM)</label>
                           <input 
                             type="number"
                             step="0.5"
                             value={cityMatchingRadius}
                             onChange={(e) => setCityMatchingRadius(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-2 text-xs focus:outline-none focus:border-indigo-500"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-2 text-xs focus:outline-none focus:border-accent focus-ring-accent text-zinc-200"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-3 gap-2">
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase block">Base Fare</label>
+                          <label className="text-[9px] font-bold text-zinc-400 uppercase block">Base Fare</label>
                           <input 
                             type="number" 
                             value={cityBaseFare}
                             onChange={(e) => setCityBaseFare(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-2 text-xs"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-2 text-xs focus:outline-none focus:border-accent text-zinc-200"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase block">Per KM</label>
+                          <label className="text-[9px] font-bold text-zinc-400 uppercase block">Per KM</label>
                           <input 
                             type="number" 
                             value={cityPerKmRate}
                             onChange={(e) => setCityPerKmRate(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-2 text-xs"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-2 text-xs focus:outline-none focus:border-accent text-zinc-200"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase block">Commission %</label>
+                          <label className="text-[9px] font-bold text-zinc-400 uppercase block">Commission %</label>
                           <input 
                             type="number" 
                             value={cityCommissionRate}
                             onChange={(e) => setCityCommissionRate(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-2 text-xs"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-2 text-xs focus:outline-none focus:border-accent text-zinc-200"
                           />
                         </div>
                       </div>
 
-                      <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] flex justify-between items-center">
-                        <span className="text-slate-400 font-semibold">Boundary Nodes Plotted:</span>
-                        <span className="font-extrabold text-indigo-400 font-mono">{polygonPoints.length}</span>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Allowed Vehicle Classes</label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {[
+                            { id: 'bike', label: 'Bike', icon: '🏍️' },
+                            { id: 'sedan', label: 'Sedan', icon: '🚗' },
+                            { id: 'suv', label: 'SUV', icon: '🚙' },
+                            { id: 'auto', label: 'Auto', icon: '🛺' }
+                          ].map((v) => {
+                            const isAllowed = cityAllowedVehicles.includes(v.id);
+                            return (
+                              <button
+                                key={v.id}
+                                type="button"
+                                onClick={() => {
+                                  if (isAllowed) {
+                                    setCityAllowedVehicles(prev => prev.filter(x => x !== v.id));
+                                  } else {
+                                    setCityAllowedVehicles(prev => [...prev, v.id]);
+                                  }
+                                }}
+                                className={`py-1.5 rounded-lg border flex flex-col items-center justify-center text-[10px] font-bold transition-all ${isAllowed ? 'bg-accent/20 border-accent text-accent' : 'bg-zinc-950 border-zinc-800 text-zinc-500'}`}
+                              >
+                                <span className="text-sm">{v.icon}</span>
+                                <span>{v.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-850 text-[11px] flex justify-between items-center">
+                        <span className="text-zinc-500 font-semibold">Boundary Nodes Plotted:</span>
+                        <span className="font-extrabold text-accent font-mono">{polygonPoints.length}</span>
                       </div>
 
                       {polygonPoints.length > 0 && (
                         <button
                           onClick={() => setPolygonPoints([])}
-                          className="w-full py-1.5 border border-slate-850 bg-slate-950 rounded-lg hover:bg-slate-900 text-[10px] font-bold text-rose-400"
+                          className="w-full py-2 border border-zinc-800 bg-zinc-950 rounded-lg hover:bg-zinc-900 text-[10px] font-bold text-rose-400 focus:outline-none"
                         >
                           Clear Plotted boundary Nodes
                         </button>
@@ -1680,10 +2346,10 @@ export default function App() {
 
                       <button
                         onClick={saveGeofenceCity}
-                        disabled={polygonPoints.length < 3}
-                        className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-500 transition-all active:scale-95"
+                        disabled={polygonPoints.length < 3 || !cityName}
+                        className="w-full py-3 rounded-xl bg-accent bg-accent-hover text-zinc-950 font-black text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-accent transition-all active:scale-95"
                       >
-                        Register Operational City geofence
+                        {isNewCity ? "Register Operational City geofence" : "Update Operational City geofence"}
                       </button>
                     </div>
                   )}
@@ -1691,27 +2357,373 @@ export default function App() {
                 </div>
               )}
 
+              {/* VIEW D: RIDE HISTORY */}
+              {activeTab === 'history' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold">
+                    <span>Summary of past spatial rides</span>
+                    <span className="font-mono bg-zinc-900 border border-zinc-850 px-2.5 py-0.5 rounded-full text-accent font-black">
+                      {rideHistory.length} Total
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {rideHistory.map((ride) => (
+                      <div key={ride.id} className="p-4 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-3 flex flex-col hover:border-zinc-800 transition-all">
+                        <div className="flex justify-between items-center pb-2 border-b border-zinc-850/60">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-lg">{vehicleDetails[ride.vehicle]?.emoji || '🚗'}</span>
+                            <div>
+                              <p className="text-xs font-black text-zinc-200 capitalize">{ride.vehicle} Class</p>
+                              <p className="text-[9px] text-zinc-500 font-mono">{new Date(ride.date).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          
+                          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
+                            ride.status === 'completed'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                          }`}>
+                            {ride.status}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 text-xs text-zinc-400">
+                          <p className="flex items-start truncate"><CircleDot className="w-3.5 h-3.5 text-emerald-400 mr-2 shrink-0 mt-0.5" /> <span className="truncate">{ride.pickup}</span></p>
+                          <p className="flex items-start truncate"><MapPin className="w-3.5 h-3.5 text-rose-500 mr-2 shrink-0 mt-0.5" /> <span className="truncate">{ride.dropoff}</span></p>
+                        </div>
+
+                        <div className="pt-2 border-t border-zinc-850/60 flex justify-between items-center text-[10px] text-zinc-500">
+                          <span>{ride.driverName ? `Driver: ${ride.driverName}` : ride.passengerName ? `Passenger: ${ride.passengerName}` : 'Partner: Dispatched'}</span>
+                          <span className="text-xs font-black text-accent font-mono">{ride.currency === 'INR' ? '₹' : '$'}{ride.fare.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* VIEW E: PAYMENTS & WALLET */}
+              {activeTab === 'payment' && (
+                <div className="space-y-5">
+                  
+                  {/* wallet credit balance card */}
+                  <div className="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 shadow-md relative overflow-hidden flex flex-col justify-between h-48">
+                    {/* Background glow logo */}
+                    <div className="absolute -bottom-8 -right-8 w-36 h-36 rounded-full bg-accent opacity-5 blur-2xl"></div>
+                    
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Available Balance</p>
+                        <h3 className="text-3xl font-black text-white font-mono mt-1">
+                          {getCurrencySymbol()}{walletBalance.toFixed(2)}
+                        </h3>
+                      </div>
+                      <span className="text-xs font-mono bg-zinc-800 border border-zinc-700/60 text-accent px-2 py-0.5 rounded uppercase font-black">
+                        {userProfile.role === 'rider' ? 'RIDER ACCOUNT' : 'EARNINGS LEDGER'}
+                      </span>
+                    </div>
+
+                    <div className="pt-4 flex space-x-3 relative z-10">
+                      {userProfile.role === 'rider' ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              const amount = prompt("Enter amount to add via Razorpay (₹ / $):", "500");
+                              if (amount && !isNaN(amount)) {
+                                setRazorpayAmount(parseFloat(amount));
+                                setRazorpayPurpose('load_wallet');
+                                setShowRazorpayModal(true);
+                              }
+                            }}
+                            className="flex-1 py-2.5 rounded-xl bg-accent bg-accent-hover text-zinc-950 text-xs font-black transition-all active:scale-95 shadow-md flex items-center justify-center"
+                          >
+                            <Plus className="w-4 h-4 mr-1.5" /> Load Wallet
+                          </button>
+                          <button
+                            onClick={() => alert("Simulated Razorpay direct checkout linked.")}
+                            className="py-2.5 px-4 rounded-xl bg-zinc-950 border border-zinc-800 hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-all active:scale-95"
+                          >
+                            Link UPI
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (walletBalance <= 0) {
+                              alert("No earnings available for payout.");
+                              return;
+                            }
+                            const amount = walletBalance;
+                            saveWalletBalance(0);
+                            addTransaction({
+                              id: 'tx_' + Math.random().toString(36).substring(2, 9),
+                              reference: 'payout_' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+                              tripId: null,
+                              amount: amount,
+                              currency: getCurrencySymbol() === '₹' ? 'INR' : 'USD',
+                              type: 'payout',
+                              method: 'IMPS Direct Transfer',
+                              status: 'success',
+                              date: new Date().toISOString()
+                            });
+                            alert(`Payout of ${getCurrencySymbol()}${amount.toFixed(2)} initiated to your linked bank account via Razorpay Route.`);
+                            addSystemLog(`Driver: Payout of ${getCurrencySymbol()}${amount.toFixed(2)} captured.`);
+                          }}
+                          className="w-full py-2.5 rounded-xl bg-accent bg-accent-hover text-zinc-950 text-xs font-black transition-all active:scale-95 shadow-md"
+                        >
+                          Request Instant Payout
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Razorpay Configuration Details */}
+                  <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-3">
+                    <h4 className="text-xs font-black text-zinc-200 uppercase tracking-wider flex items-center">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400 mr-2" /> razorpay API Integration
+                    </h4>
+                    
+                    <div className="space-y-3.5 text-xs">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-zinc-500 font-bold block">RAZORPAY KEY ID</label>
+                        <input
+                          type="text"
+                          value={razorpayKey}
+                          onChange={(e) => {
+                            setRazorpayKey(e.target.value);
+                            localStorage.setItem('razorpayKey', e.target.value);
+                          }}
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-3 text-xs text-zinc-300 focus:outline-none focus:border-accent"
+                        />
+                      </div>
+                      
+                      <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-850 text-[10px] text-zinc-500 leading-normal flex items-start">
+                        <Info className="w-4 h-4 text-accent mr-2 shrink-0 mt-0.5" />
+                        <p>
+                          This key represents the dynamic client-side authorization profile. Direct card payments and wallet top-ups generate callbacks mapped through this gateway.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cards Section */}
+                  {userProfile.role === 'rider' && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-xs font-semibold text-zinc-400">
+                        <span>Linked Debit/Credit Cards</span>
+                        <button
+                          onClick={() => {
+                            const last4 = prompt("Enter last 4 digits of Card:", "1122");
+                            if (last4 && last4.length === 4) {
+                              const newCard = {
+                                id: 'card_' + Math.random().toString(36).substring(2, 9),
+                                brand: 'Visa',
+                                last4: last4,
+                                expiry: '06/30',
+                                holder: userProfile.name
+                              };
+                              saveLinkedCards([...linkedCards, newCard]);
+                            }
+                          }}
+                          className="text-accent hover:underline flex items-center font-bold"
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" /> Add Card
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {linkedCards.map((card) => (
+                          <div key={card.id} className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-850 flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <span className="text-xl">💳</span>
+                              <div>
+                                <p className="text-xs font-bold text-zinc-200">{card.brand} •••• {card.last4}</p>
+                                <p className="text-[9px] text-zinc-500">{card.holder} | Expires {card.expiry}</p>
+                              </div>
+                            </div>
+                            
+                            <button
+                              onClick={() => {
+                                saveLinkedCards(linkedCards.filter(c => c.id !== card.id));
+                              }}
+                              className="text-[10px] text-rose-400 hover:text-rose-300 font-bold"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+              {/* VIEW F: TRANSACTION HISTORY */}
+              {activeTab === 'transactions' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold">
+                    <span>Financial transaction records</span>
+                    <span className="font-mono bg-zinc-900 border border-zinc-850 px-2.5 py-0.5 rounded-full text-accent font-black">
+                      {transactions.length} Entries
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {transactions.map((tx) => (
+                      <div key={tx.id} className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-850 flex items-center justify-between hover:border-zinc-800 transition-all">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
+                            tx.type === 'capture' || tx.type === 'earning'
+                              ? 'bg-emerald-500/10 text-emerald-400'
+                              : tx.type === 'hold'
+                              ? 'bg-amber-500/10 text-amber-400'
+                              : 'bg-rose-500/10 text-rose-400'
+                          }`}>
+                            {tx.type === 'capture' || tx.type === 'earning' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <p className="text-xs font-black text-zinc-200 capitalize">{tx.type.replace('_', ' ')}</p>
+                              <span className="text-[8px] bg-zinc-950 text-zinc-500 px-1 py-0.5 rounded font-mono font-bold">{tx.method}</span>
+                            </div>
+                            <p className="text-[9px] text-zinc-500 font-mono mt-0.5">{tx.reference} | {new Date(tx.date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+
+                        <span className={`text-xs font-black font-mono ${
+                          tx.type === 'capture' || tx.type === 'earning' || tx.type === 'wallet_load'
+                            ? 'text-emerald-400'
+                            : tx.type === 'hold'
+                            ? 'text-amber-400'
+                            : 'text-rose-400'
+                        }`}>
+                          {tx.type === 'capture' || tx.type === 'earning' || tx.type === 'wallet_load' ? '+' : '-'}
+                          {tx.currency === 'INR' ? '₹' : '$'}{tx.amount.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* VIEW G: THEME & SETTINGS */}
+              {activeTab === 'settings' && (
+                <div className="space-y-5">
+                  
+                  {/* Theme customizer color selector */}
+                  <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-4">
+                    <label className="text-xs font-black text-zinc-200 uppercase tracking-wider block">Customize Action Color Theme</label>
+                    <p className="text-[11px] text-zinc-500 leading-normal">
+                      Select your preferred vibrant 10% accent color mapping. It dynamically updates buttons, routes, alerts, and system focus rings instantly.
+                    </p>
+                    
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { id: 'yellow', label: 'Electric Yellow', hex: '#facc15', bg: 'bg-yellow-400' },
+                        { id: 'orange', label: 'Safety Orange', hex: '#f97316', bg: 'bg-orange-500' },
+                        { id: 'green', label: 'Neon Green', hex: '#22c55e', bg: 'bg-emerald-500' }
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setAccentTheme(item.id);
+                            localStorage.setItem('accentTheme', item.id);
+                            addSystemLog(`Theme updated to ${item.label}`);
+                          }}
+                          className={`p-3.5 rounded-xl border flex flex-col items-center justify-center space-y-2 transition-all ${
+                            accentTheme === item.id 
+                              ? 'bg-zinc-800 border-accent text-white shadow-accent' 
+                              : 'bg-zinc-950 border-zinc-850 text-zinc-400 hover:text-zinc-200'
+                          }`}
+                        >
+                          <span className={`w-4 h-4 rounded-full ${item.bg} block`}></span>
+                          <span className="text-[9px] font-black">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Profile Details overview */}
+                  <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-3">
+                    <label className="text-xs font-black text-zinc-200 uppercase tracking-wider block">Profile Credentials</label>
+                    
+                    <div className="space-y-3.5 text-xs">
+                      <div className="grid grid-cols-2 gap-2 pb-2 border-b border-zinc-850/60">
+                        <span className="text-zinc-500">Authorized Name:</span>
+                        <span className="text-zinc-200 font-bold text-right">{userProfile.name}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pb-2 border-b border-zinc-850/60">
+                        <span className="text-zinc-500">Email Address:</span>
+                        <span className="text-zinc-200 font-bold text-right truncate">{userProfile.email}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pb-2 border-b border-zinc-850/60">
+                        <span className="text-zinc-500">Phone Code:</span>
+                        <span className="text-zinc-200 font-bold text-right">{userProfile.phone || 'Not Added'}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <span className="text-zinc-500">Access Token (JWT):</span>
+                        <span className="text-zinc-400 font-mono text-right truncate">{token.slice(0, 15)}...</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Driver specific vehicle editing if driver */}
+                  {userProfile.role === 'driver' && driverProfile && (
+                    <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-3">
+                      <label className="text-xs font-black text-zinc-200 uppercase tracking-wider block">Vehicle Setup</label>
+                      <div className="space-y-3 text-xs text-zinc-400">
+                        <div className="grid grid-cols-2 gap-2 pb-2 border-b border-zinc-850/60">
+                          <span>Plate Number:</span>
+                          <span className="text-zinc-200 font-bold text-right">{driverProfile.vehicle_number}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 pb-2 border-b border-zinc-850/60">
+                          <span>Vehicle Class:</span>
+                          <span className="text-zinc-200 font-bold text-right capitalize">{driverProfile.vehicle_type}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <span>Base / Per KM Rates:</span>
+                          <span className="text-zinc-200 font-bold text-right">{getCurrencySymbol()}{driverProfile.base_fare.toFixed(2)} / {getCurrencySymbol()}{driverProfile.per_km_rate.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* System Developer Settings */}
+                  <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-3">
+                    <label className="text-xs font-black text-zinc-200 uppercase tracking-wider block font-sans">Developer telemetry details</label>
+                    <div className="space-y-2 text-[10px] font-mono text-zinc-400">
+                      <p>WS Status: <span className="text-emerald-400">CONNECTIVITY VERIFIED</span></p>
+                      <p>OSRM Server: <span className="text-accent">https://router.project-osrm.org</span></p>
+                      <p>Local time: <span className="text-zinc-300">2026-06-06T15:35:21+05:30</span></p>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
             </div>
 
             {/* Core Web logging panel at bottom */}
-            <div className="flex flex-col border-t border-slate-900 p-6 space-y-3 min-h-[180px] bg-slate-950">
+            <div className="flex flex-col border-t border-zinc-900 p-6 space-y-3 min-h-[180px] bg-zinc-950 select-none">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1.5">
-                  <Activity className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center space-x-1.5">
+                  <Activity className="w-3.5 h-3.5 text-accent" />
                   <span>Telemetry Socket Event logs</span>
                 </span>
                 {systemLogs.length > 0 && (
                   <button 
                     onClick={() => setSystemLogs([])}
-                    className="text-[9px] font-extrabold text-slate-600 hover:text-slate-400"
+                    className="text-[9px] font-extrabold text-zinc-600 hover:text-zinc-400 focus:outline-none"
                   >
                     Clear Logs
                   </button>
                 )}
               </div>
-              <div className="flex-1 bg-slate-950 border border-slate-900 rounded-xl p-3.5 overflow-y-auto font-mono text-[9px] text-slate-500 space-y-1.5 max-h-40">
+              <div className="flex-1 bg-zinc-950 border border-zinc-900 rounded-xl p-3.5 overflow-y-auto font-mono text-[9px] text-zinc-500 space-y-1.5 max-h-40">
                 {systemLogs.length === 0 ? (
-                  <p className="italic text-slate-700">No telemetry events recorded. Perform actions to trigger streaming WebSocket activity logs.</p>
+                  <p className="italic text-zinc-700">No telemetry events recorded. Perform actions to trigger streaming WebSocket activity logs.</p>
                 ) : (
                   systemLogs.map((logLine, idx) => (
                     <p key={idx} className="leading-relaxed whitespace-pre-wrap">{logLine}</p>
@@ -1723,12 +2735,12 @@ export default function App() {
           </div>
 
           {/* RIGHT COLUMN VIEWPORT: Map section */}
-          <div className="flex-1 h-full p-6 relative bg-slate-900">
+          <div className="flex-1 h-full p-6 relative bg-zinc-900">
             <Map 
               mode={userProfile.role === 'admin' ? 'admin' : (userProfile.role === 'driver' ? 'driver' : 'rider')}
               cities={cities}
-              pickup={pickup}
-              dropoff={dropoff}
+              pickup={getMapPickup()}
+              dropoff={getMapDropoff()}
               driverLocation={
                 userProfile.role === 'rider' && activeTrip && activeTrip.status !== 'completed' 
                   ? driverLocation 
@@ -1738,10 +2750,11 @@ export default function App() {
               selectionMode={riderSelectionMode}
               onMapClick={handleMapClick}
               mapCenter={
-                pickup 
-                  ? [pickup.Latitude, pickup.Longitude] 
+                getMapPickup() 
+                  ? [getMapPickup().Latitude, getMapPickup().Longitude] 
                   : (driverLocation ? [driverLocation.Latitude, driverLocation.Longitude] : [12.9716, 77.5946])
               }
+              accentColor={getAccentHex()}
             />
           </div>
 

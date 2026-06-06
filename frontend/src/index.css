@@ -4,25 +4,101 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* 60% Neutral Background (Sleek deep carbon dark) */
+  --bg-primary: #09090b; /* Zinc 950 */
+  --bg-secondary: #020204;
+
+  /* 30% Structural elements/Text */
+  --bg-structural: #0f0f13; /* Zinc 900 adjusted */
+  --bg-structural-light: #18181b; /* Zinc 800 */
+  --bg-structural-card: #18181b;
+  --border-structural: #27272a; /* Zinc 800 */
+  --border-structural-light: #3f3f46; /* Zinc 700 */
+  
+  --text-primary: #f4f4f5; /* Zinc 100 */
+  --text-secondary: #a1a1aa; /* Zinc 400 */
+  --text-tertiary: #71717a; /* Zinc 500 */
+  
+  /* 10% Vibrant Action Accent (Default Electric Yellow) */
+  --accent-color: #facc15;
+  --accent-color-hover: #eab308;
+  --accent-shadow: rgba(250, 204, 21, 0.2);
+}
+
+.theme-yellow {
+  --accent-color: #facc15;
+  --accent-color-hover: #eab308;
+  --accent-shadow: rgba(250, 204, 21, 0.2);
+}
+
+.theme-orange {
+  --accent-color: #f97316;
+  --accent-color-hover: #ea580c;
+  --accent-shadow: rgba(249, 115, 22, 0.2);
+}
+
+.theme-green {
+  --accent-color: #22c55e;
+  --accent-color-hover: #16a34a;
+  --accent-shadow: rgba(34, 197, 94, 0.2);
+}
+
+/* Dynamic Accent Class Bindings */
+.bg-accent {
+  background-color: var(--accent-color) !important;
+}
+.bg-accent-hover:hover {
+  background-color: var(--accent-color-hover) !important;
+}
+.bg-accent-15 {
+  background-color: rgba(from var(--accent-color) r g b / 0.15) !important;
+}
+.bg-accent-10 {
+  background-color: rgba(from var(--accent-color) r g b / 0.10) !important;
+}
+.text-accent {
+  color: var(--accent-color) !important;
+}
+.text-accent-hover:hover {
+  color: var(--accent-color-hover) !important;
+}
+.border-accent {
+  border-color: var(--accent-color) !important;
+}
+.border-accent-hover:hover {
+  border-color: var(--accent-color-hover) !important;
+}
+.shadow-accent {
+  box-shadow: 0 10px 15px -3px var(--accent-shadow), 0 4px 6px -4px var(--accent-shadow) !important;
+}
+.shadow-accent-glow {
+  box-shadow: 0 0 20px var(--accent-shadow) !important;
+}
+.focus-ring-accent:focus {
+  outline: 2px solid var(--accent-color) !important;
+  outline-offset: 2px !important;
+}
+
 /* Premium glassmorphism effects */
 .glass {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(15, 15, 19, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .glass-dark {
-  background: rgba(17, 24, 39, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(9, 9, 11, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -30,12 +106,13 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.8);
+  background: var(--accent-color);
+  opacity: 0.8;
 }
 
 /* Leaflet Map Fixes */
@@ -45,3 +122,47 @@
   z-index: 1;
   font-family: inherit;
 }
+
+.leaflet-bar {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.leaflet-bar a {
+  background-color: var(--bg-structural-light) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-structural) !important;
+  transition: all 0.2s;
+}
+
+.leaflet-bar a:hover {
+  background-color: var(--accent-color) !important;
+  color: var(--bg-primary) !important;
+}
+
+/* Smooth marker transition for animated nearby vehicles and driver movement */
+.custom-marker {
+  transition: transform 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), left 1.5s, top 1.5s !important;
+}
+
+/* Pulsing animated radar effect for pickup point */
+@keyframes pickup-pulse {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 15px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.pickup-pulsing-icon {
+  animation: pickup-pulse 2s infinite ease-in-out;
+}
+
+

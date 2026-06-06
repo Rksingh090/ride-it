@@ -65,11 +65,21 @@ func (r *CityRepository) GetActiveCityByLocation(ctx context.Context, loc domain
 	return &city, nil
 }
 
-// CreateCity persists a new city boundary using a Well-Known Text (WKT) representation of the polygon.
+// CreateCity persists a new city boundary or updates an existing one using a Well-Known Text (WKT) representation of the polygon.
 func (r *CityRepository) CreateCity(ctx context.Context, city *domain.City) error {
 	query := `
 		INSERT INTO cities (name, boundary, base_fare, per_km_rate, commission_rate, allowed_vehicle_types, is_active, currency, matching_radius_km, created_at, updated_at)
 		VALUES ($1, ST_GeomFromText($2, 4326), $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+		ON CONFLICT (name) DO UPDATE SET
+			boundary = EXCLUDED.boundary,
+			base_fare = EXCLUDED.base_fare,
+			per_km_rate = EXCLUDED.per_km_rate,
+			commission_rate = EXCLUDED.commission_rate,
+			allowed_vehicle_types = EXCLUDED.allowed_vehicle_types,
+			is_active = EXCLUDED.is_active,
+			currency = EXCLUDED.currency,
+			matching_radius_km = EXCLUDED.matching_radius_km,
+			updated_at = NOW()
 		RETURNING id, created_at, updated_at;
 	`
 
@@ -93,7 +103,7 @@ func (r *CityRepository) CreateCity(ctx context.Context, city *domain.City) erro
 	).Scan(&city.ID, &city.CreatedAt, &city.UpdatedAt)
 
 	if err != nil {
-		return fmt.Errorf("failed to create city boundary: %w", err)
+		return fmt.Errorf("failed to create/update city boundary: %w", err)
 	}
 
 	return nil
