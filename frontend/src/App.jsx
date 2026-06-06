@@ -104,6 +104,63 @@ export default function App() {
   const [showDropoffSuggestions, setShowDropoffSuggestions] = useState(false);
   const [isChooseOnMapActive, setIsChooseOnMapActive] = useState(false);
 
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [dropoffSuggestions, setDropoffSuggestions] = useState([]);
+  const [isPickupSearching, setIsPickupSearching] = useState(false);
+  const [isDropoffSearching, setIsDropoffSearching] = useState(false);
+
+  // Debounced API search for pickup locations
+  useEffect(() => {
+    if (pickupSearchText.length < 3) {
+      setPickupSuggestions([]);
+      return;
+    }
+    const isExactMatch = pickup && pickup.name === pickupSearchText;
+    if (isExactMatch) return;
+
+    const delay = setTimeout(async () => {
+      setIsPickupSearching(true);
+      try {
+        const resp = await fetch(`/api/maps/search?q=${encodeURIComponent(pickupSearchText)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          setPickupSuggestions(data || []);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsPickupSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(delay);
+  }, [pickupSearchText, pickup]);
+
+  // Debounced API search for dropoff locations
+  useEffect(() => {
+    if (dropoffSearchText.length < 3) {
+      setDropoffSuggestions([]);
+      return;
+    }
+    const isExactMatch = dropoff && dropoff.name === dropoffSearchText;
+    if (isExactMatch) return;
+
+    const delay = setTimeout(async () => {
+      setIsDropoffSearching(true);
+      try {
+        const resp = await fetch(`/api/maps/search?q=${encodeURIComponent(dropoffSearchText)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          setDropoffSuggestions(data || []);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsDropoffSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(delay);
+  }, [dropoffSearchText, dropoff]);
+
   // Driver states
   const [isDriverOnline, setIsDriverOnline] = useState(false);
   const [driverLocation, setDriverLocation] = useState({ Latitude: 12.9716, Longitude: 77.5946 }); // Bangalore default
@@ -1097,11 +1154,30 @@ export default function App() {
                         </div>
 
                         {/* Pickup Autocomplete Suggestions list */}
-                        {showPickupSuggestions && filteredPickupLandmarks.length > 0 && (
+                        {showPickupSuggestions && (pickupSuggestions.length > 0 || isPickupSearching || filteredPickupLandmarks.length > 0) && (
                           <div className="absolute left-0 right-0 mt-1 bg-slate-900 border border-slate-800 rounded-xl max-h-48 overflow-y-auto z-[9999] shadow-2xl p-1.5 space-y-1">
-                            {filteredPickupLandmarks.map((lm, idx) => (
+                            {isPickupSearching && (
+                              <div className="p-2 text-center text-xs text-slate-500 italic">Searching locations...</div>
+                            )}
+                            {!isPickupSearching && pickupSuggestions.map((lm, idx) => (
                               <button
-                                key={idx}
+                                key={`api-${idx}`}
+                                type="button"
+                                onClick={() => {
+                                  setPickup({ Latitude: lm.latitude, Longitude: lm.longitude, name: lm.name });
+                                  setPickupSearchText(lm.name);
+                                  setShowPickupSuggestions(false);
+                                  addSystemLog(`Pickup address selected: ${lm.name}`);
+                                }}
+                                className="w-full py-2 px-3 text-left rounded-lg text-xs hover:bg-slate-850 hover:text-white text-slate-200 flex items-center justify-between"
+                              >
+                                <span className="truncate">{lm.name}</span>
+                                <span className="text-[8px] bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded uppercase font-bold">GPS</span>
+                              </button>
+                            ))}
+                            {!isPickupSearching && pickupSuggestions.length === 0 && filteredPickupLandmarks.map((lm, idx) => (
+                              <button
+                                key={`lm-${idx}`}
                                 type="button"
                                 onClick={() => {
                                   setPickup({ Latitude: lm.lat, Longitude: lm.lng, name: lm.name });
@@ -1142,11 +1218,30 @@ export default function App() {
                         </div>
 
                         {/* Dropoff Autocomplete Suggestions list */}
-                        {showDropoffSuggestions && filteredDropoffLandmarks.length > 0 && (
+                        {showDropoffSuggestions && (dropoffSuggestions.length > 0 || isDropoffSearching || filteredDropoffLandmarks.length > 0) && (
                           <div className="absolute left-0 right-0 mt-1 bg-slate-900 border border-slate-800 rounded-xl max-h-48 overflow-y-auto z-[9999] shadow-2xl p-1.5 space-y-1">
-                            {filteredDropoffLandmarks.map((lm, idx) => (
+                            {isDropoffSearching && (
+                              <div className="p-2 text-center text-xs text-slate-500 italic">Searching locations...</div>
+                            )}
+                            {!isDropoffSearching && dropoffSuggestions.map((lm, idx) => (
                               <button
-                                key={idx}
+                                key={`api-${idx}`}
+                                type="button"
+                                onClick={() => {
+                                  setDropoff({ Latitude: lm.latitude, Longitude: lm.longitude, name: lm.name });
+                                  setDropoffSearchText(lm.name);
+                                  setShowDropoffSuggestions(false);
+                                  addSystemLog(`Dropoff address selected: ${lm.name}`);
+                                }}
+                                className="w-full py-2 px-3 text-left rounded-lg text-xs hover:bg-slate-850 hover:text-white text-slate-200 flex items-center justify-between"
+                              >
+                                <span className="truncate">{lm.name}</span>
+                                <span className="text-[8px] bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded uppercase font-bold">GPS</span>
+                              </button>
+                            ))}
+                            {!isDropoffSearching && dropoffSuggestions.length === 0 && filteredDropoffLandmarks.map((lm, idx) => (
+                              <button
+                                key={`lm-${idx}`}
                                 type="button"
                                 onClick={() => {
                                   setDropoff({ Latitude: lm.lat, Longitude: lm.lng, name: lm.name });
