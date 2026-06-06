@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Database Service using PostgreSQL pre-configured with PostGIS extension
+  db:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: rideit_db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=rishab
+      - POSTGRES_PASSWORD=rishab123
+      - POSTGRES_DB=rideit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Transient Telemetry Caching Service using Redis
+  redis:
+    image: redis:7-alpine
+    container_name: rideit_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
