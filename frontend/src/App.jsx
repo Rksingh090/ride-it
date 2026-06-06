@@ -336,6 +336,155 @@ export default function App() {
     return () => clearTimeout(delay);
   }, [dropoffSearchText, dropoff]);
 
+  const fetchUserCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      addSystemLog("Geolocation is not supported by this browser.");
+      return;
+    }
+    addSystemLog("Requesting live user location...");
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        addSystemLog(`User coordinates retrieved: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        
+        let addressName = `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+            headers: { 'Accept-Language': 'en' }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.display_name) {
+              const parts = data.display_name.split(',');
+              addressName = parts.slice(0, 3).join(',').trim();
+            }
+          }
+        } catch (err) {
+          console.error("OSM reverse geocoding error:", err);
+        }
+
+        setPickup({ Latitude: lat, Longitude: lng, name: addressName });
+        setPickupSearchText(addressName);
+        addSystemLog(`Pickup auto-set to: ${addressName}`);
+      },
+      (error) => {
+        addSystemLog(`Geolocation error: ${error.message}`);
+        console.error("Geolocation error:", error);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  // Auto-fetch current location on Rider Book page load
+  useEffect(() => {
+    if (isLoggedIn && userProfile && userProfile.role === 'rider' && activeTab === 'book' && !pickup) {
+      fetchUserCurrentLocation();
+    }
+  }, [isLoggedIn, userProfile, activeTab]);
+
+  // Generate and animate nearby vehicles while booking
+  useEffect(() => {
+    const isBooking = isLoggedIn && userProfile?.role === 'rider' && activeTab === 'book' && (!activeTrip || activeTrip.status === 'completed');
+    if (!isBooking) {
+      setNearbyVehicles([]);
+      return;
+    }
+
+    const refLat = pickup ? pickup.Latitude : 12.9716;
+    const refLng = pickup ? pickup.Longitude : 77.5946;
+
+    let vehicles = [
+      { id: 'v1', type: 'sedan', latitude: refLat + 0.0035, longitude: refLng + 0.0042, angle: 45 },
+      { id: 'v2', type: 'suv', latitude: refLat - 0.0051, longitude: refLng + 0.0031, angle: 120 },
+      { id: 'v3', type: 'bike', latitude: refLat + 0.0029, longitude: refLng - 0.0063, angle: 280 },
+      { id: 'v4', type: 'auto', latitude: refLat - 0.0025, longitude: refLng - 0.0039, angle: 190 }
+    ];
+    setNearbyVehicles(vehicles);
+
+    const interval = setInterval(() => {
+      setNearbyVehicles(prev => {
+        if (prev.length === 0) return vehicles;
+        return prev.map(v => {
+          const deltaLat = (Math.random() - 0.5) * 0.0005;
+          const deltaLng = (Math.random() - 0.5) * 0.0005;
+          const newAngle = Math.atan2(deltaLat, deltaLng) * (180 / Math.PI);
+          return {
+            ...v,
+            latitude: v.latitude + deltaLat,
+            longitude: v.longitude + deltaLng,
+            angle: Math.round(newAngle)
+          };
+        });
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn, userProfile?.role, activeTab, !!activeTrip, pickup?.Latitude, pickup?.Longitude]);
+
+  // Calculate driver ETA to pickup point
+  useEffect(() => {
+    if (userProfile?.role === 'rider' && activeTrip && (activeTrip.status === 'accepted' || activeTrip.status === 'arrived') && driverLocation && pickup) {
+      const getETA = async () => {
+        try {
+          const url = `https://router.project-osrm.org/route/v1/driving/${driverLocation.Longitude},${driverLocation.Latitude};${pickup.Longitude},${pickup.Latitude}?overview=false`;
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.routes && data.routes.length > 0) {
+              const route = data.routes[0];
+              const minutes = Math.round(route.duration / 60);
+              const distanceKm = (route.distance / 1000).toFixed(1);
+              setDriverETA({
+                minutes: minutes < 1 ? 1 : minutes,
+                distanceKm: parseFloat(distanceKm)
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch OSRM ETA:", err);
+        }
+      };
+      const timer = setTimeout(getETA, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setDriverETA(null);
+    }
+  }, [activeTrip?.status, driverLocation, pickup, userProfile?.role]);
+
+  const startTrackingDriverLocation = () => {
+    if (!navigator.geolocation) {
+      addSystemLog("Driver GPS tracking is not supported by this browser.");
+      return;
+    }
+    addSystemLog("Starting live Driver GPS tracking...");
+    driverLocationWatchId.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setDriverLocation({ Latitude: lat, Longitude: lng });
+        
+        if (driverWS.current && driverWS.current.readyState === WebSocket.OPEN && !driverActiveTrip) {
+          driverWS.current.send(JSON.stringify({ latitude: lat, longitude: lng }));
+          addSystemLog(`Driver live location streamed: (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
+        }
+      },
+      (err) => {
+        addSystemLog(`Driver GPS watch error: ${err.message}`);
+        console.error("watchPosition error:", err);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  const stopTrackingDriverLocation = () => {
+    if (driverLocationWatchId.current !== null) {
+      navigator.geolocation.clearWatch(driverLocationWatchId.current);
+      driverLocationWatchId.current = null;
+      addSystemLog("Stopped live Driver GPS tracking.");
+    }
+  };
+
   // Driver states
   const [isDriverOnline, setIsDriverOnline] = useState(false);
   const [driverLocation, setDriverLocation] = useState({ Latitude: 12.9716, Longitude: 77.5946 }); // Bangalore default
@@ -355,6 +504,11 @@ export default function App() {
   const [polygonPoints, setPolygonPoints] = useState([]); // Array of [lat, lng]
   const [selectedCityId, setSelectedCityId] = useState('');
   const [isNewCity, setIsNewCity] = useState(false);
+
+  // Live location and ETA states
+  const [nearbyVehicles, setNearbyVehicles] = useState([]);
+  const [driverETA, setDriverETA] = useState(null);
+  const driverLocationWatchId = useRef(null);
 
   // WebSocket references
   const riderWS = useRef(null);
@@ -650,6 +804,7 @@ export default function App() {
       driverWS.current = null;
     }
     stopDriverSimulation();
+    stopTrackingDriverLocation();
   };
 
   const stopDriverSimulation = () => {
@@ -671,6 +826,7 @@ export default function App() {
     } else {
       connectDriverWS(token, userProfile.id);
       setIsDriverOnline(true);
+      startTrackingDriverLocation();
       // Stream initial coordinates
       setTimeout(() => {
         if (driverWS.current && driverWS.current.readyState === WebSocket.OPEN) {
@@ -1812,7 +1968,15 @@ export default function App() {
                       {/* Map Clicking Mode Selector */}
                       {!activeTrip && (
                         <div className="flex items-center justify-between pt-1">
-                          <span className="text-xs text-zinc-500 font-semibold">Or interact directly with the map:</span>
+                          <button
+                            type="button"
+                            onClick={fetchUserCurrentLocation}
+                            className="py-1.5 px-3 rounded-xl border border-zinc-850 bg-zinc-950 text-zinc-400 hover:text-zinc-200 text-[10px] font-black transition-all flex items-center space-x-1"
+                          >
+                            <Compass className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Locate Me</span>
+                          </button>
+                          <span className="text-[10px] text-zinc-500 font-semibold">Or interact directly:</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -1914,6 +2078,24 @@ export default function App() {
                       </button>
                     ) : (
                       <div className="space-y-3 pt-2 border-t border-zinc-850">
+                        {driverETA && (activeTrip.status === 'accepted' || activeTrip.status === 'arrived') && (
+                          <div className="p-4 rounded-xl bg-accent/10 border border-accent/20 space-y-2.5">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-zinc-400 font-bold flex items-center">
+                                <Car className="w-4 h-4 text-accent mr-1.5 animate-bounce" />
+                                Driver is arriving
+                              </span>
+                              <span className="text-accent font-black text-sm">{driverETA.minutes} min</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-zinc-950 rounded-full overflow-hidden relative">
+                              <div className="absolute top-0 bottom-0 left-0 bg-accent rounded-full animate-pulse" style={{ width: '45%' }}></div>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] text-zinc-500 font-mono">
+                              <span>Distance: {driverETA.distanceKm} km away</span>
+                              <span>Live GPS tracked</span>
+                            </div>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center text-xs p-3.5 bg-zinc-950 rounded-xl border border-zinc-850">
                           <span className="text-zinc-500 font-semibold">Ride Status:</span>
                           <span className="font-extrabold text-accent uppercase tracking-wider animate-pulse">{activeTrip.status}</span>
@@ -1929,20 +2111,6 @@ export default function App() {
                       </div>
                     )}
                   </div>
-
-                  {/* Rider log outputs */}
-                  {riderLogs.length > 0 && (
-                    <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-2">
-                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Trip State Operations</span>
-                      <div className="w-full max-h-40 overflow-y-auto bg-zinc-950 p-3.5 rounded-xl border border-zinc-850 space-y-2">
-                        {riderLogs.map((logStr, i) => (
-                          <p key={i} className="text-[10px] font-semibold text-accent font-mono leading-relaxed">
-                            &gt; {logStr}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -2073,19 +2241,7 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Driver logs */}
-                  {driverLogs.length > 0 && (
-                    <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-2">
-                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Telemetry Event logs</span>
-                      <div className="w-full max-h-40 overflow-y-auto bg-zinc-950 p-3.5 rounded-xl border border-zinc-850 space-y-2">
-                        {driverLogs.map((logStr, i) => (
-                          <p key={i} className="text-[10px] font-semibold text-accent font-mono leading-relaxed">
-                            &gt; {logStr}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Driver logs removed for premium UI presentation */}
 
                 </div>
               )}
@@ -2705,33 +2861,6 @@ export default function App() {
 
             </div>
 
-            {/* Core Web logging panel at bottom */}
-            <div className="flex flex-col border-t border-zinc-900 p-6 space-y-3 min-h-[180px] bg-zinc-950 select-none">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center space-x-1.5">
-                  <Activity className="w-3.5 h-3.5 text-accent" />
-                  <span>Telemetry Socket Event logs</span>
-                </span>
-                {systemLogs.length > 0 && (
-                  <button 
-                    onClick={() => setSystemLogs([])}
-                    className="text-[9px] font-extrabold text-zinc-600 hover:text-zinc-400 focus:outline-none"
-                  >
-                    Clear Logs
-                  </button>
-                )}
-              </div>
-              <div className="flex-1 bg-zinc-950 border border-zinc-900 rounded-xl p-3.5 overflow-y-auto font-mono text-[9px] text-zinc-500 space-y-1.5 max-h-40">
-                {systemLogs.length === 0 ? (
-                  <p className="italic text-zinc-700">No telemetry events recorded. Perform actions to trigger streaming WebSocket activity logs.</p>
-                ) : (
-                  systemLogs.map((logLine, idx) => (
-                    <p key={idx} className="leading-relaxed whitespace-pre-wrap">{logLine}</p>
-                  ))
-                )}
-              </div>
-            </div>
-
           </div>
 
           {/* RIGHT COLUMN VIEWPORT: Map section */}
@@ -2755,6 +2884,7 @@ export default function App() {
                   : (driverLocation ? [driverLocation.Latitude, driverLocation.Longitude] : [12.9716, 77.5946])
               }
               accentColor={getAccentHex()}
+              nearbyVehicles={nearbyVehicles}
             />
           </div>
 
