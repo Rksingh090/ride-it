@@ -336,6 +336,46 @@ export default function App() {
     return () => clearTimeout(delay);
   }, [dropoffSearchText, dropoff]);
 
+
+
+  // Driver states
+  const [isDriverOnline, setIsDriverOnline] = useState(false);
+  const [driverLocation, setDriverLocation] = useState({ Latitude: 12.9716, Longitude: 77.5946 }); // Bangalore default
+  const [driverTripOffer, setDriverTripOffer] = useState(null); 
+  const [driverActiveTrip, setDriverActiveTrip] = useState(null); 
+  const [driverLogs, setDriverLogs] = useState([]);
+
+  // Admin states
+  const [adminTab, setAdminTab] = useState('drivers'); // 'drivers' or 'cities'
+  const [cityName, setCityName] = useState('Bangalore');
+  const [cityBaseFare, setCityBaseFare] = useState('50.00');
+  const [cityPerKmRate, setCityPerKmRate] = useState('15.00');
+  const [cityCommissionRate, setCityCommissionRate] = useState('10.00');
+  const [cityCurrency, setCityCurrency] = useState('INR'); // USD or INR
+  const [cityMatchingRadius, setCityMatchingRadius] = useState('8.00'); // in km
+  const [cityAllowedVehicles, setCityAllowedVehicles] = useState(['bike', 'sedan', 'suv', 'auto']);
+  const [polygonPoints, setPolygonPoints] = useState([]); // Array of [lat, lng]
+  const [selectedCityId, setSelectedCityId] = useState('');
+  const [isNewCity, setIsNewCity] = useState(false);
+
+  // Live location and ETA states
+  const [nearbyVehicles, setNearbyVehicles] = useState([]);
+  const [driverETA, setDriverETA] = useState(null);
+  const driverLocationWatchId = useRef(null);
+
+  // WebSocket references
+  const riderWS = useRef(null);
+  const driverWS = useRef(null);
+  const driverUpdateInterval = useRef(null);
+
+  // System logs
+  const [systemLogs, setSystemLogs] = useState([]);
+
+  const addSystemLog = (msg) => {
+    const time = new Date().toLocaleTimeString();
+    setSystemLogs(prev => [`[${time}] ${msg}`, ...prev.slice(0, 49)]);
+  };
+
   const fetchUserCurrentLocation = () => {
     if (!navigator.geolocation) {
       addSystemLog("Geolocation is not supported by this browser.");
@@ -485,43 +525,6 @@ export default function App() {
     }
   };
 
-  // Driver states
-  const [isDriverOnline, setIsDriverOnline] = useState(false);
-  const [driverLocation, setDriverLocation] = useState({ Latitude: 12.9716, Longitude: 77.5946 }); // Bangalore default
-  const [driverTripOffer, setDriverTripOffer] = useState(null); 
-  const [driverActiveTrip, setDriverActiveTrip] = useState(null); 
-  const [driverLogs, setDriverLogs] = useState([]);
-
-  // Admin states
-  const [adminTab, setAdminTab] = useState('drivers'); // 'drivers' or 'cities'
-  const [cityName, setCityName] = useState('Bangalore');
-  const [cityBaseFare, setCityBaseFare] = useState('50.00');
-  const [cityPerKmRate, setCityPerKmRate] = useState('15.00');
-  const [cityCommissionRate, setCityCommissionRate] = useState('10.00');
-  const [cityCurrency, setCityCurrency] = useState('INR'); // USD or INR
-  const [cityMatchingRadius, setCityMatchingRadius] = useState('8.00'); // in km
-  const [cityAllowedVehicles, setCityAllowedVehicles] = useState(['bike', 'sedan', 'suv', 'auto']);
-  const [polygonPoints, setPolygonPoints] = useState([]); // Array of [lat, lng]
-  const [selectedCityId, setSelectedCityId] = useState('');
-  const [isNewCity, setIsNewCity] = useState(false);
-
-  // Live location and ETA states
-  const [nearbyVehicles, setNearbyVehicles] = useState([]);
-  const [driverETA, setDriverETA] = useState(null);
-  const driverLocationWatchId = useRef(null);
-
-  // WebSocket references
-  const riderWS = useRef(null);
-  const driverWS = useRef(null);
-  const driverUpdateInterval = useRef(null);
-
-  // System logs
-  const [systemLogs, setSystemLogs] = useState([]);
-
-  const addSystemLog = (msg) => {
-    const time = new Date().toLocaleTimeString();
-    setSystemLogs(prev => [`[${time}] ${msg}`, ...prev.slice(0, 49)]);
-  };
 
   // Helper to load operational cities list
   const fetchCities = async () => {
